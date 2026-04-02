@@ -1,6 +1,6 @@
 import QtQuick 2.2
 import Sailfish.Silica 1.0
-import "../composents"
+import "../components"
 
 Page {
     id:page
@@ -60,24 +60,18 @@ Page {
                 anchors.bottom: parent.bottom
                 width: parent.width
 
-                ButtonLayout {
-//                SectionLink {
-                  Button {
-//                    name: vi18n.get("info.voir.bio")
-                    text: vi18n.get("info.voir.bio")
+                SectionLink {
+                    name: vi18n.get("info.voir.bio")
                     enabled: artiste.length >0
                     onClicked: pageStack.push(Qt.resolvedUrl("Biographie.qml"),
                                               {artiste:artiste})
                 }
-//                SectionLink {
-                  Button {
-//                    name: vi18n.get("info.voir.paroles")
-                    text: vi18n.get("info.voir.paroles")
+                SectionLink {
+                    name: vi18n.get("info.voir.paroles")
                     enabled: titre.length >0
                     onClicked: pageStack.push(Qt.resolvedUrl("Parole.qml"),
                                               {chemin:chemin,artiste:artiste,titre:titre})
                 }
-            }
             }
         }
     }

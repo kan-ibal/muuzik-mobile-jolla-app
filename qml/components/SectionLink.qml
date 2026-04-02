@@ -11,8 +11,6 @@ BackgroundItem {
 
     implicitHeight: Theme.itemSizeMedium
 
-    onClicked: pageStack.push(pageSource.toString(), {})
-
     Rectangle {
         anchors.fill: parent
         gradient: Gradient {

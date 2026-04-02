@@ -1,6 +1,6 @@
 import QtQuick 2.2
 import Sailfish.Silica 1.0
-import "../composents"
+import "../components"
 import "../hints"
 import "../js/app.js" as App
 

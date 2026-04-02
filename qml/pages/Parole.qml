@@ -3,7 +3,7 @@ import Sailfish.Silica 1.0
 import Sailfish.WebView 1.0
 import Sailfish.WebEngine 1.0
 import Sailfish.WebView.Popups 1.0
-import "../composents"
+import "../components"
 
 Page {
     id:page

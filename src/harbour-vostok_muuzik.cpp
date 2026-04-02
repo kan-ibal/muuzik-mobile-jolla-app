@@ -82,7 +82,6 @@ int main(int argc, char *argv[])
     qRegisterMetaTypeStreamOperators<QList<QString> >("QList<QString>");
 
     qmlRegisterType<ListeItem>("UuidListeItem", 1, 0, "UuidListeItem");
-
     qmlRegisterType<ResultItem>( "ResultItem", 1, 0, "ResultItem" );
     qRegisterMetaType<ResultItemListe>( "ResultItemListe" );
 
@@ -131,11 +130,10 @@ int main(int argc, char *argv[])
 //    qDebug() << "STAT : " << stat->getFileCount() << " " << stat->getFileSize();
 
 
-
-
     // set main pages and start
     view->setSource(SailfishApp::pathTo("qml/harbour-vostok_muuzik.qml"));
-    view->show();
+    //view->show();
+    view->showFullScreen();
 
     return app->exec();
 }

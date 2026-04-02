@@ -1,6 +1,6 @@
 import QtQuick 2.2
 import Sailfish.Silica 1.0
-import "../composents"
+import "../components"
 import "../hints"
 
 Page {
@@ -22,8 +22,8 @@ Page {
         var ctag = Qt.createComponent(
                     page.orientation === Orientation.Portrait ||
                     page.orientation === Orientation.PortraitInverted ?
-                        "../composents/menu/MenuListeVertical.qml" :
-                        "../composents/menu/MenuGrilleHorizontal.qml");
+                        "../components/menu/MenuListeVertical.qml" :
+                        "../components/menu/MenuGrilleHorizontal.qml");
         page.contenu  = ctag.createObject(conteneur, {model:listeModel});
 
     }
@@ -123,7 +123,7 @@ Page {
 
     onStatusChanged: {
         if(ConfigService.getNiveauConfigOk()===false && status===PageStatus.Active) {
-            var dlg = pageStack.push(Qt.resolvedUrl("../composents/DialogRedirectConfig.qml") );
+            var dlg = pageStack.push(Qt.resolvedUrl("../components/DialogRedirectConfig.qml") );
         }
     }
 

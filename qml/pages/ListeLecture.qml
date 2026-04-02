@@ -1,7 +1,7 @@
 import QtQuick 2.2
 import Sailfish.Silica 1.0
 import "../js/app.js" as App
-import "../composents"
+import "../components"
 import "../hints"
 import org.vostok.virtualfiles 1.0
 import org.vostok.metadata 1.0

@@ -112,7 +112,7 @@ HEADERS += \
 OTHER_FILES += qml/harbour-vostok_muuzik.qml \
     qml/cover/*.qml \
     qml/pages/*.qml \
-    qml/composents/*.qml \
+    qml/components/*.qml \
     qml/hints/*.qml \
     qml/js/*.js \
     rpm/harbour-vostok_muuzik.changes \
@@ -130,13 +130,13 @@ INSTALLS += tag
 
 DISTFILES += \
     harbour-vostok_muuzik.qrc \
-    qml/composents/* \
-    qml/composents/menu/* \
+    qml/components/* \
+    qml/components/menu/* \
     qml/pages/* \
     qml/dlg/* \
     qml/cover/* \
     qml/hints/* \
-    qml/composents/lecteur/* \
+    qml/components/lecteur/* \
     qml/js/affichage.js \
     qml/pages/InfoMedia.qml \
     qml/pages/InfoRep.qml

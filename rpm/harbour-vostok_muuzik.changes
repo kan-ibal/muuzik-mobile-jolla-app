@@ -1,7 +1,8 @@
-* Fri Mar 27 2026 kan-ibal <kan-ibal@users.noreply.github.com> 2.5
+* Fri Mar 27 2026 kan-ibal <kan-ibal@users.noreply.github.com> 2.5.2
 - fix for lyrics and biography
+- compiled against gcc8 - 4.5.0.18
 
-* Thu Mar 26 2026 kan-ibal <kan-ibal@users.noreply.github.com> 2.5
+* Thu Mar 26 2026 kan-ibal <kan-ibal@users.noreply.github.com> 2.5.1
 - build app for arch64 and against 4.6.0.13
 
 * Fri Mar 25 2022 jerome <jerome.levreau@vostoksystem.com> 2.5

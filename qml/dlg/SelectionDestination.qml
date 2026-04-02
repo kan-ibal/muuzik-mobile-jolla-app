@@ -1,6 +1,6 @@
 import QtQuick 2.2
 import Sailfish.Silica 1.0
-import "../composents"
+import "../components"
 
 import org.vostok.virtualfiles 1.0
 

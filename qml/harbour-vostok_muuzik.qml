@@ -5,7 +5,7 @@ import Nemo.Policy 1.0
 
 import "pages"
 import "cover"
-import "composents"
+import "components"
 import "dlg"
 
 ApplicationWindow
