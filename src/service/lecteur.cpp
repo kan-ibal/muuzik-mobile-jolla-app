@@ -224,7 +224,7 @@ void lecteurService::doChargement(const QList<QString> &vurls, bool recursif, qi
             position = index;
 
         } catch(const std::exception & e) {
-            qDebug()<< "sur l'exeption";
+            qDebug()<< "on the exception";
         }
     }
 
@@ -301,7 +301,7 @@ void lecteurService::restaurerSession() {
  * @brief lecteurService::sauverSession
  */
 void lecteurService::sauverSession() {
-    qDebug() << "sauverSession debut";
+    qDebug() << "saveSession start";
 
     QList<QString> l;
 
@@ -316,7 +316,7 @@ void lecteurService::sauverSession() {
     settings.setValue(LECTURE_LISTE, QVariant::fromValue(l));
     settings.setValue(LECTURE_LISTE_INDEX, playlist.currentIndex() );
     settings.sync();
-    qDebug() << "sauverSession fait";
+    qDebug() << "saveSession stop";
 }
 
 /**

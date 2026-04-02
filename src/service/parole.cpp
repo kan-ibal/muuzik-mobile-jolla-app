@@ -111,7 +111,7 @@ QString paroleService::chercher(const QString & url,const QString & artiste, con
     if(configService::getInstance().getParoleDirect()==false) {
         return remoteUrl.toString();
     }
-
+    // qDebug() << "URL: " << QString();
     return QString();
 }
 

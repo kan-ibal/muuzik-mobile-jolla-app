@@ -32,7 +32,7 @@
 #include <QtQuick>
 //#endif
 
-#include<QCoreApplication>
+#include <QCoreApplication>
 #include <QMetaType>
 //#include <QtWebView>
 #include <sailfishapp.h>

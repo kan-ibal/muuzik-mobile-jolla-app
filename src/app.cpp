@@ -82,7 +82,7 @@ Notification *App::trouverNotification(quint32 id) {
        foreach (QObject *o, l) {
             Notification *nn = (Notification *)o;
             if(nn->replacesId()== id) {
-                qDebug() << id << " existe";
+                qDebug() << id << " exists";
                 return nn;
             }
         }

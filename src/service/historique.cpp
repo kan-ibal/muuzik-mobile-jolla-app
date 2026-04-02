@@ -49,7 +49,7 @@ void HistoriqueService::init(QQmlContext *context,QString name) {
  * @param v
  */
 void HistoriqueService::ajouter(const QString &vurl) {
-    qDebug() << "HISTORIQUE AJOUTE : " << vurl;
+    qDebug() << "HISTORY ADDED : " << vurl;
     if(configService::getInstance().getHistorique()==false) {
         return;
     }

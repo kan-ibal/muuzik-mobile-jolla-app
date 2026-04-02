@@ -110,8 +110,8 @@ Page {
                 text:  vi18n.get("bio.effacer")
                 enabled: contenu.text.length>0
                 onClicked: {
-                    serv_parole.effacerBio(artiste);
-                    serv_parole.effacerBio(mbid);
+                    LastfmService.effacerBio(artiste);
+                    LastfmService.effacerBio(mbid);
                     pageStack.navigateBack();
                 }
             }

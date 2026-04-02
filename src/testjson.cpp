@@ -24,8 +24,8 @@ void TestJson::doTest(const QString vurl ) {
     QString data = TestJson::readFile(VFI.getPathFromVUrl(vurl));
 
     if(data.isEmpty()) {
-        qDebug() << "pas de données";
-        return;
+        qDebug() << "no data";
+         return;
     }
 
     QJsonDocument json_doc = QJsonDocument::fromJson(data.toUtf8());

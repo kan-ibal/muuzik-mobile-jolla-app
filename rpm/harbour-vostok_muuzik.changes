@@ -1,5 +1,5 @@
-* Fri Mar 27 2026 kan-ibal <kan-ibal@users.noreply.github.com> 2.5.2
-- fix for lyrics and biography
+* Thu Apr 02 2026 kan-ibal <kan-ibal@users.noreply.github.com> 2.5.2
+- fix for Biography
 - compiled against gcc8 - 4.5.0.18
 
 * Thu Mar 26 2026 kan-ibal <kan-ibal@users.noreply.github.com> 2.5.1

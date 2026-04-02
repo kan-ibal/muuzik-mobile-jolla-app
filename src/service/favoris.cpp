@@ -145,7 +145,7 @@ qint64 favorisService::getFavoris(const QString vurl) {
  * @brief charge la liste des favoris
  */
 void favorisService::recharger() {
-    qDebug() << "favorisService::charger";
+    qDebug() << "favorisService::load";
 
     if(liste.isEmpty()==false) {
         qDeleteAll(liste);

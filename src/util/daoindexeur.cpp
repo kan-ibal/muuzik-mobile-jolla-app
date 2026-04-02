@@ -291,7 +291,7 @@ quint64 DaoIndexeur::taille() {
 
     db.transaction();
     if(q.exec("SELECT Count(*) FROM Item") ==false) {
-        qDebug()<< "pb taille Item";
+        qDebug()<< "pb size Item";
         return val;
     }
 
