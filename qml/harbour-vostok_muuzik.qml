@@ -1,7 +1,7 @@
 import QtQuick 2.0
 import Sailfish.Silica 1.0
-;import Sailfish.Media 1.0
-;import org.nemomobile.policy 1.0
+import Sailfish.Media 1.0
+import Nemo.Policy 1.0
 
 import "pages"
 import "cover"

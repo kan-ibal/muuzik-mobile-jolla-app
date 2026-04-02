@@ -6,8 +6,6 @@
 Name:       harbour-vostok_muuzik
 
 # >> macros
-%define _binary_payload w9.gzdio
-%define _source_payload w9.gzdio
 # << macros
 
 %{!?qtc_qmake:%define qtc_qmake %qmake}
@@ -15,8 +13,8 @@ Name:       harbour-vostok_muuzik
 %{!?qtc_make:%define qtc_make make}
 %{?qtc_builddir:%define _builddir %qtc_builddir}
 Summary:    Muuzik! player
-Version:    2.5.1
-Release:    2
+Version:    2.5.2
+Release:    0
 Group:      Qt/Qt
 License:    MPLv2
 URL:        http://www.vostoksystem.com/mobile-applications/muuzik-app
@@ -30,6 +28,7 @@ BuildRequires:  pkgconfig(Qt5Quick)
 BuildRequires:  pkgconfig(nemonotifications-qt5)
 BuildRequires:  pkgconfig(taglib)
 BuildRequires:  pkgconfig(ogg)
+BuildRequires:  pkgconfig(qt5embedwidget)
 BuildRequires:  desktop-file-utils
 
 %description

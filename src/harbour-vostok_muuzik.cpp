@@ -87,7 +87,7 @@ int main(int argc, char *argv[])
     qRegisterMetaType<ResultItemListe>( "ResultItemListe" );
 
     QScopedPointer<QGuiApplication> app(SailfishApp::application(argc, argv));
-    //    QtWebView::initialize();
+    //QtWebView::initialize();
     app->setOrganizationName(QStringLiteral("com.vostoksystem"));
     app->setApplicationName(QStringLiteral("Muuzik!"));
     app->setApplicationVersion(QString(APP_VERSION));

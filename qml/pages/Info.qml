@@ -60,18 +60,24 @@ Page {
                 anchors.bottom: parent.bottom
                 width: parent.width
 
-                SectionLink {
-                    name: vi18n.get("info.voir.bio")
+                ButtonLayout {
+//                SectionLink {
+                  Button {
+//                    name: vi18n.get("info.voir.bio")
+                    text: vi18n.get("info.voir.bio")
                     enabled: artiste.length >0
                     onClicked: pageStack.push(Qt.resolvedUrl("Biographie.qml"),
                                               {artiste:artiste})
                 }
-                SectionLink {
-                    name: vi18n.get("info.voir.paroles")
+//                SectionLink {
+                  Button {
+//                    name: vi18n.get("info.voir.paroles")
+                    text: vi18n.get("info.voir.paroles")
                     enabled: titre.length >0
                     onClicked: pageStack.push(Qt.resolvedUrl("Parole.qml"),
                                               {chemin:chemin,artiste:artiste,titre:titre})
                 }
+            }
             }
         }
     }

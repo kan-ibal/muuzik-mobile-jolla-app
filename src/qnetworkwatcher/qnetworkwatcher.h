@@ -1,5 +1,5 @@
 /*
- * an helper class/service which monitor the network status, with signa for up, wifi and 3g/4g
+ * an helper class/service which monitor the network status, with signal for up, wifi and 3g/4g
  */
 #ifndef QNETWORKWATCHER_H
 #define QNETWORKWATCHER_H
@@ -41,7 +41,7 @@ public:
     static qnetworkwatcher& getInstance();
 
     /**
-     * @brief IMPORTANT ! you must register this objet into qml, this method do it for you.
+     * @brief IMPORTANT ! you must register this object into qml, this method do it for you.
      * Service will be available on the name "qnetworkwatcher" (else define in QNETWORKWATCHER_QML_NAME).
      * You can also register service by yourself (or not, if you don't need it in qml)
      * @param context

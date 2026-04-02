@@ -1,5 +1,8 @@
 import QtQuick 2.2
 import Sailfish.Silica 1.0
+import Sailfish.WebView 1.0
+import Sailfish.WebEngine 1.0
+import Sailfish.WebView.Popups 1.0
 import "../composents"
 
 Page {
@@ -123,20 +126,15 @@ Page {
         }
     }
 
-    SilicaWebView {
-        id:web
+    WebView {
         visible: false
         anchors.fill: parent
         width: parent.width
-//        experimental.userAgent:"Mozilla/5.0 (Linux; U; Android 4.0.3; ko-kr; LG-L160L Build/IML74K) AppleWebkit/534.30    (KHTML, like Gecko) Version/4.0 Mobile Safari/534.30"
-
-
-
+//        experimental.userAgent:"Mozilla/5.0 (Linux; U; Android 4.0.3; ko-kr; LG-L160L Build/IML74K) AppleWebkit/534
     }
 
-
     Attente {
-        enabled: (ParoleService.enCours || status===PageStatus.Activating) && (done ===false)
+        enabled: (ParoleService.enCours || status===PageStatus.Activating) && (done === false)
     }
 
     onStatusChanged: {
@@ -175,6 +173,3 @@ Page {
         }
     }
 }
-
-
-//[W] unknown:439 - file:///usr/lib/qt5/qml/Sailfish/Silica/PageStack.js:439: Error: Error while loading page: file:///usr/lib/qt5/qml/.qml:-1 File not found

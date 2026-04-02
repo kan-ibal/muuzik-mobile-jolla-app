@@ -13,7 +13,7 @@
 TARGET = harbour-vostok_muuzik
 
 CONFIG += sailfishapp taglib
-PKGCONFIG += nemonotifications-qt5 taglib ogg
+PKGCONFIG += nemonotifications-qt5 taglib ogg qt5embedwidget
 QT += multimedia dbus sql
 # webview
 #LIBS += -ltag -lnemonotifications-qt5 -lopus -lFLAC++ -logg

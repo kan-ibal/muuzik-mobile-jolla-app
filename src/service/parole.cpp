@@ -29,7 +29,10 @@
 
 static QRegExp BLANK("[ -:#';,?&$%()=+\\[\\]!*]");
 static QRegExp NOHTML("<br ?/?>",Qt::CaseInsensitive);
-static QRegularExpression LY("<div class=[\"\']lyricbox[\"\']>(.*)(<!--|<div)");
+//static QRegularExpression LY("<div class=[\"\']lyricbox[\"\']>(.*)(<!--|<div)");
+static QRegularExpression LY("</title><meta content=(.*)(name=[\"\']description[\"\']>)");
+//<div class="lyricbox">... <div>
+//<!--
 static QRegularExpression DEC("([0-9]+)");
 
 /**
@@ -90,7 +93,7 @@ QString paroleService::chercher(const QString & url,const QString & artiste, con
         return QString();
     }
 
-    QUrl remoteUrl(QStringLiteral("http://lyrics.wikia.com/wiki/%1:%2")
+    QUrl remoteUrl(QStringLiteral("https://www.letras.com/%1/%2/")
                    .arg(versMajuscule(artiste))
                    .arg(versMajuscule(titre)));
 
