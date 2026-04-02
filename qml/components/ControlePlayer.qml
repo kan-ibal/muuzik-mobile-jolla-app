@@ -1,6 +1,6 @@
 import QtQuick 2.5
 import Sailfish.Silica 1.0
-import "lecteur"
+import "player"
 import "../js/app.js" as App
 
 Rectangle {
