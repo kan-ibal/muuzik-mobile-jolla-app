@@ -432,7 +432,7 @@ Page {
                 console.log("opening : " + listModel.get(index));
 
                 if(actionBp(listModel.get(index))===false) {
-                    showMenu();
+                    openMenu();
                 }
             }
 
