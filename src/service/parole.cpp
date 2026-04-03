@@ -29,10 +29,12 @@
 
 static QRegExp BLANK("[ -:#';,?&$%()=+\\[\\]!*]");
 static QRegExp NOHTML("<br ?/?>",Qt::CaseInsensitive);
-//static QRegularExpression LY("<div class=[\"\']lyricbox[\"\']>(.*)(<!--|<div)");
-static QRegularExpression LY("</title><meta content=(.*)(name=[\"\']description[\"\']>)");
-//<div class="lyricbox">... <div>
-//<!--
+//static QRegularExpression LY("<p id=\\[\"]songLyricsDiv\\[\"] class=\\[\"]lyrics-body\\[\"]>(.*?)div>");
+//static QRegularExpression LY("lyrics-body[\\\\][\"]>(.*?)div>");
+static QRegularExpression LY("lyrics-body[\"]>(.*?)div>");
+//static QRegularExpression LY("As you look(.*?)from me");
+// <p id="songLyricsDiv" class="lyrics-body">
+// </div>
 static QRegularExpression DEC("([0-9]+)");
 
 /**
@@ -65,37 +67,41 @@ void paroleService::init(QQmlContext *context, QString name) {
 }
 
 /**
- * @brief retrouve les parole pour chemin, artiste, titre
- * Si trouve en local, retourne sinon lance une requette web
- * @param chemin virtuel vers le fichier audio, utilisé pour le cache local
+ * @brief Retrieves the lyrics for a given path, artist and title
+ * If found locally, returns the text; otherwise, makes a web request
+ * @param The relative path to the audio file, used for the local cache
  * @param artiste
- * @praram titre
- * @return les texte ou vide si en recherche web
+ * @param titre
+ * @return The lyrics, or an empty string if a web search is performed
  */
+
 QString paroleService::chercher(const QString & url,const QString & artiste, const QString & titre) {
 
     if(raf) {
         return QString();
     }
 
-    // cherche un local
+    // searching local
     QString tmp = lecture(url);
     if(tmp.length()>0 ) {
+//        qDebug() << "LOCAL url: " << tmp;
         return tmp;
     }
 
+    // no cache and no network
     if(QNWI.getConnected() == NetworkType::NONE) {
-        // pas de cache et pas de reseau
+//        qDebug() << "no network";
         return QString();
     }
 
     if(configService::getInstance().getWifi() && (QNWI.getWifi()==false)) {
+//        qDebug() << "no wifi";
         return QString();
     }
 
-    QUrl remoteUrl(QStringLiteral("https://www.letras.com/%1/%2/")
-                   .arg(versMajuscule(artiste))
-                   .arg(versMajuscule(titre)));
+    QUrl remoteUrl(QStringLiteral("https://www.songlyrics.com/%1/%2-lyrics/")
+                   .arg(versMinuscule(artiste))
+                   .arg(versMinuscule(titre)));
 
     QNetworkRequest request(remoteUrl);
 
@@ -103,22 +109,26 @@ QString paroleService::chercher(const QString & url,const QString & artiste, con
     //  request.setHeader(QNetworkRequest::ContentTypeHeader, "application/x-www-form-urlencoded");
     QNetworkReply *reply = manager->get(request);
     reply->setProperty(URLID,url);
-
+//     qDebug() << "reply: " << reply;
     raf=true;
     emit enCoursChanged();
 
-    // pas de parole en local mais si pas de telechargement direct renvoi l'url
+    // No local storage, but if direct downloading isn't possible, redirect to the URL
     if(configService::getInstance().getParoleDirect()==false) {
+//        qDebug() << "getParoleDirect";
         return remoteUrl.toString();
     }
-    // qDebug() << "URL: " << QString();
+//    qDebug() << "remoteURL: " << remoteUrl;
+//    qDebug() << "URL: " << url;
+
     return QString();
 }
 
 /**
- * @brief reponse reseau
+ * @brief network response
  * @param reply
  */
+
 void paroleService::reponse(QNetworkReply *reply) {
     int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
     if(statusCode==301||statusCode==302) {
@@ -129,17 +139,27 @@ void paroleService::reponse(QNetworkReply *reply) {
     }
 
     QString res;
+    QString res2;
 
     if(reply->error() == QNetworkReply::NoError) {
         QString tmp(reply->readAll());
+//            qDebug() << "QNetworkReply read tmp: " << tmp;
+        if(!LY.isValid())
+            qDebug() << LY.errorString();
         QRegularExpressionMatch m=LY.match(tmp);
+//            qDebug() << "RegExpr show LY: " << LY;
+//            qDebug() << "RegExpr read m: " << m; 
         if(m.hasMatch()) {
-            res.append(paroleService::decode(m.captured(1).replace(NOHTML, RETOURLIGNE)));
+//            res.append(paroleService::decode(m.captured(1).replace(NOHTML, RETOURLIGNE)));
+//            res.append(paroleService::decode(m.captured(1).replace("\\n", "\n")));
+            res = m.captured(1);
+            qDebug() << "RegExpr read res: " << res;
         }
     }
 
     if(res.length()>0 && reply->property(URLID).isValid()) {
         QString url = reply->property(URLID).toString();
+//        qDebug() << "res: " << res;
         ecriture(url,res);
     }
 
@@ -151,7 +171,7 @@ void paroleService::reponse(QNetworkReply *reply) {
 }
 
 /**
- * @brief decode une base &#xxx;
+ * @brief decode a database &#xxx;
  * @return
  */
 QString *paroleService::decode(QString const v) {
@@ -169,17 +189,18 @@ QString *paroleService::decode(QString const v) {
 }
 
 /**
-* @brief ecrit les paroles en local pour le fichier chemin
-* @param url virtuel vers le fichier audio
-* @param donnee
+* @brief writes the text locally to the specified file
+* @param virtual url to the audio file
+* @param data
 */
+
 void paroleService::ecriture(QString const &url, QString const &donnee) {
 
     QString vparent = VFI.getParentVUrl(url);
     QString parent = VFI.getPathFromVUrl(vparent);
 
     if(VFI.exist(vparent + "/" + PAROLECACHEDIR) ==false) {
-        // on recup la date du rep parent car elle va changer lors de la creation de PAROLECACHEDIR
+        // We retrieve the parent record's date because it will change when PAROLECACHEDIR is created
         QFileInfo info(parent);
 
         QDir d(parent + "/" + PAROLECACHEDIR);
@@ -206,7 +227,7 @@ void paroleService::ecriture(QString const &url, QString const &donnee) {
         return;
     }
 
-    // ajoute en local
+    // add locally
     QTextStream stream( &f );
     stream.setCodec("UTF-8");
     stream << donnee << "\n" << endl;
@@ -215,9 +236,9 @@ void paroleService::ecriture(QString const &url, QString const &donnee) {
 }
 
 /**
- * @brief charge les paroles à partir d'une version locale
- * @param chemin virtuel vers le fichier audio
- * @return empty si aucune
+ * @brief Loads lyrics from a local file
+ * @param Virtual path to the audio file
+ * @return empty if none
  */
 QString paroleService::lecture(QString const &url) {
 
@@ -240,8 +261,8 @@ QString paroleService::lecture(QString const &url) {
 }
 
 /**
- * @brief efface la version locale
- * @param chemin virtuel vers le fichier audio
+ * @brief Deletes the local version
+ * @param Virtual path to the audio file
  */
 void paroleService::effacer(const QString & url) {
 
@@ -254,7 +275,7 @@ void paroleService::effacer(const QString & url) {
 }
 
 /**
- * @brief tous les mots avec premier lettre en majuscule
+ * @brief all words with an uppercase first letter
  * @param str
  * @param sep
  * @return
@@ -272,6 +293,25 @@ QString paroleService::versMajuscule(QString const &str, QString const &sep) {
     return list.join(sep);
 }
 
+/**
+ * @brief all words with an lowercase letters
+ * @param str
+ * @param sep
+ * @return
+ */
+
+QString paroleService::versMinuscule(QString const &str, QString const &sep) {
+
+    QStringList tmp = str.toLower().split(BLANK,QString::SkipEmptyParts);
+    QStringList list;
+
+    foreach (QString s, tmp) {
+        list.append(s);
+    }
+
+    return list.join(sep);
+}
+
 
 //http://lyrics.wikia.com/wiki/The_Pretty_Reckless:Kill_Me
 //http://lyrics.wikia.com/wiki/Pink_Floyd:Another_Brick_In_The_Wall_Part_2
@@ -279,3 +319,9 @@ QString paroleService::versMajuscule(QString const &str, QString const &sep) {
 //<!--
 
 //http://www.metrolyrics.com/kill-me-lyrics-pretty-reckless.html
+
+// https://www.songlyrics.com/pink-floyd/another-brick-in-the-wall-pt-2-lyrics/
+// <div id="songLyricsDiv-outer">
+// <p id="songLyricsDiv" class="lyrics-body">
+// </div>
+// </div><!--end songLyricsContainer-->

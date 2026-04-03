@@ -83,12 +83,20 @@ private:
     static QString lecture(QString const &url);
 
     /**
-     * @brief tous les mots avec premier lettre en majuscule
+     * @brief  all words starting with a uppercase letter
      * @param str
      * @param sep
      * @return
      */
     static QString versMajuscule(QString const &str, QString const &sep="_");
+
+    /**
+     * @brief all words starting with a lowercase letter
+     * @param str
+     * @param sep
+     * @return
+     */
+    static QString versMinuscule(QString const &str, QString const &sep="-");
 
 signals:
 

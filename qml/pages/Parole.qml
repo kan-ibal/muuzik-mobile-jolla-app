@@ -127,6 +127,8 @@ Page {
     }
 
     WebView {
+        id: web
+        url: web.url
         visible: false
         anchors.fill: parent
         width: parent.width
