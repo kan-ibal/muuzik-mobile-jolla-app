@@ -8,18 +8,18 @@ Item {
 
     property var morceau: lecteurService.titre
 
-    property int _index: lecteurService.index   // index du titre en cours
-    property int _taille: lecteurService.taille     // taille de la liste
-    property int _tempsTotalListe: lecteurService.dureeTotale //totla pistes
-    property int _tempsbaseListe: 0                      // deja des titre precedent
-    property int _ecouteTitre: 0                    // deja ecouté de la piste
+    property int _index: lecteurService.index   // index of the current title
+    property int _taille: lecteurService.taille     // size of the list
+    property int _tempsTotalListe: lecteurService.dureeTotale // total runs
+    property int _tempsbaseListe: 0                      // as mentioned in the previous section
+    property int _ecouteTitre: 0                    // already listened to the track
 
     width: parent.width
     height: fond.height + compteur.height
 
     //-----------------------------------------
     function mettreAJourInfoListe() {
-        // on recalcule le temps de base
+        // we recalculate the base time
 
         var l = lecteurService.liste;
         var tm=0;

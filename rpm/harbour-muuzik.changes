@@ -1,3 +1,7 @@
+* Sun May 17 2026 kan-ibal <kan-ibal@users.noreply.github.com> 2.5.2
+- fix for Lyrics in Text mode
+- removing vostok from name
+
 * Fri Apr 03 2026 kan-ibal <kan-ibal@users.noreply.github.com> 2.5.2
 - fix for Biography and Lyrics in WebView mode
 - compiled against gcc8 - 4.5.0.18

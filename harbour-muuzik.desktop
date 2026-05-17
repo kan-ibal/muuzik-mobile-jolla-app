@@ -1,10 +1,10 @@
 [Desktop Entry]
 Type=Application
-Icon=harbour-vostok_muuzik
-Exec=harbour-vostok_muuzik
+Icon=harbour-muuzik
+Exec=harbour-muuzik
 Name=Muuzik!
 
 [X-Sailjail]
 Sandboxing=Disabled
-OrganizationName=com.vostoksystem
+OrganizationName=com.kan-ibal
 ApplicationName=Muuzik!

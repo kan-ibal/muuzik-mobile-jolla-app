@@ -10,7 +10,7 @@
 #   - translation filenames have to be changed
 
 # The name of your application
-TARGET = harbour-vostok_muuzik
+TARGET = harbour-muuzik
 
 CONFIG += sailfishapp taglib
 PKGCONFIG += nemonotifications-qt5 taglib ogg qt5embedwidget
@@ -36,7 +36,7 @@ include(src/qnetworkwatcher/qnetworkwatcher.pri)
 #include(src/json/qt-json.pri)
 
 SOURCES += \
-    src/harbour-vostok_muuzik.cpp \
+    src/harbour-muuzik.cpp \
     src/app.cpp \
     src/service/config.cpp \
     src/service/playlist.cpp \
@@ -109,18 +109,18 @@ HEADERS += \
     src/bean/albumstat.h \
     src/bean/track.h
 
-OTHER_FILES += qml/harbour-vostok_muuzik.qml \
+OTHER_FILES += qml/harbour-muuzik.qml \
     qml/cover/*.qml \
     qml/pages/*.qml \
     qml/components/*.qml \
     qml/hints/*.qml \
     qml/js/*.js \
-    rpm/harbour-vostok_muuzik.changes \
-    rpm/harbour-vostok_muuzik.spec \
-    rpm/harbour-vostok_muuzik.yaml \
-    harbour-vostok_muuzik.desktop
+    rpm/harbour-muuzik.changes \
+    rpm/harbour-muuzik.spec \
+    rpm/harbour-muuzik.yaml \
+    harbour-muuzik.desktop
 
-RESOURCES += harbour-vostok_muuzik.qrc
+RESOURCES += harbour-muuzik.qrc
 
 SAILFISHAPP_ICONS = 86x86 108x108 128x128 256x256
 
@@ -129,7 +129,7 @@ tag.path = /usr/share/$${TARGET}
 INSTALLS += tag
 
 DISTFILES += \
-    harbour-vostok_muuzik.qrc \
+    harbour-muuzik.qrc \
     qml/components/* \
     qml/components/menu/* \
     qml/pages/* \

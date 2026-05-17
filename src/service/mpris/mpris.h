@@ -40,7 +40,7 @@ public:
     void SetFullscreen(bool v){}
     bool getHasTrackList(){return false;}
     QString getIdentity(){ return "Muuzik! player" ;}
-    QString getDesktopEntry(){ return "harbour-vostok_muuzik" ;}
+    QString getDesktopEntry(){ return "harbour-muuzik" ;}
     QStringList getSupportedUriSchemes() {return uri;}
     QStringList getSupportedMimeTypes() {return mime;}
 

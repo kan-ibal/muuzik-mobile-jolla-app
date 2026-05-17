@@ -39,15 +39,7 @@ Note this app is **unmaintained** I won't be able to help you.
 
 This is the last full code - even additional lib - of the app. I cannot guaranty it will even build on the la QTCreator version but this is a good example for how to structure a Cpp / QT app, mobile or desktop. 
 
-##Binary / screenshots
-
-Link to the main page with screenshot :
-[http://vostoksystem.com/muuzik-app](http://vostoksystem.com/muuzik-app)
-Link to the end user manual :
-[http://vostoksystem.com/documentation/muuzik](http://vostoksystem.com/documentation/muuzik)
-
-
 ##License
 Open source, Either you use part of it, I would just ask for a mention on my name.
 
-
+Thanks to the work and courtesy of [jerome.levreau](https://forum.sailfishos.org/u/jerome.levreau)

@@ -40,7 +40,8 @@
 #define TYPEMETHODE "typemethode"
 #define  ARTISTTOPALBUMSMAX 20
 
-static QRegExp BLANK("[ -:#';,?&$%()=+\\[\\]!*]");
+//static QRegExp BLANK("[ -:#';,?&$%()=+\\[\\]!*]");
+static QRegExp BLANK("[ -#':;,?$%()=+\\[\\]!*-]");
 static QRegularExpression LASTFMIMGSOURCE("(https://lastfm-img2.akamaized.net/i/u/300x300/[0-9a-f]+\\.png)");
 
 /**
@@ -87,8 +88,8 @@ QString lastfmService::biographie(QString const &nom) {
     if(raf) {
         return QString();
     }
-
     QString lnom = nom.toLower();
+//    qDebug() << "Value lnom: " << lnom;
 
     // cherche en local
     QString tmp = lireBio(lnom);
@@ -105,7 +106,8 @@ QString lastfmService::biographie(QString const &nom) {
         return QString();
     }
 
-    QUrl url(QStringLiteral(ARTISTGETINFO).arg(lnom.replace(BLANK, "%20")));
+    QUrl url(QStringLiteral(ARTISTGETINFO).arg(lnom.replace(BLANK, "%20").replace("&", "%26")));
+//    qDebug() << "Value url: " << url;
     QNetworkRequest request(url);
     request.setRawHeader("User-Agent", "User Agent");
     QNetworkReply *reply = manager->get(request);
@@ -254,6 +256,7 @@ QString lastfmService::lire(QString const &url) {
 
     if(f.exists()==false) {
         f.setFileName( QString(url).replace(' ', "%20"));
+        f.setFileName( QString(url).replace('&', "&#38;"));
     }
 
 

@@ -29,9 +29,8 @@
 
 static QRegExp BLANK("[ -:#';,?&$%()=+\\[\\]!*]");
 static QRegExp NOHTML("<br ?/?>",Qt::CaseInsensitive);
-//static QRegularExpression LY("<p id=\\[\"]songLyricsDiv\\[\"] class=\\[\"]lyrics-body\\[\"]>(.*?)div>");
-//static QRegularExpression LY("lyrics-body[\\\\][\"]>(.*?)div>");
-static QRegularExpression LY("lyrics-body[\"]>(.*?)div>");
+//static QRegularExpression LY("lyrics-body[\"]>(.*?)div>");
+static QRegularExpression LY("lyrics-body\"[^>]*>(.*?)<\\/p>", QRegularExpression::DotMatchesEverythingOption);
 //static QRegularExpression LY("As you look(.*?)from me");
 // <p id="songLyricsDiv" class="lyrics-body">
 // </div>
@@ -139,7 +138,6 @@ void paroleService::reponse(QNetworkReply *reply) {
     }
 
     QString res;
-    QString res2;
 
     if(reply->error() == QNetworkReply::NoError) {
         QString tmp(reply->readAll());
@@ -147,13 +145,13 @@ void paroleService::reponse(QNetworkReply *reply) {
         if(!LY.isValid())
             qDebug() << LY.errorString();
         QRegularExpressionMatch m=LY.match(tmp);
-//            qDebug() << "RegExpr show LY: " << LY;
-//            qDebug() << "RegExpr read m: " << m; 
         if(m.hasMatch()) {
 //            res.append(paroleService::decode(m.captured(1).replace(NOHTML, RETOURLIGNE)));
-//            res.append(paroleService::decode(m.captured(1).replace("\\n", "\n")));
             res = m.captured(1);
-            qDebug() << "RegExpr read res: " << res;
+// Cleanup HTML tags if needed
+            res.replace("<br />", "\n").remove(QRegularExpression("<[^>]*>"));
+            res.replace(QString("&apos;"), QString("'"),  Qt::CaseInsensitive);
+//            qDebug() << "RegExpr read res: " << res;
         }
     }
 
@@ -311,14 +309,6 @@ QString paroleService::versMinuscule(QString const &str, QString const &sep) {
 
     return list.join(sep);
 }
-
-
-//http://lyrics.wikia.com/wiki/The_Pretty_Reckless:Kill_Me
-//http://lyrics.wikia.com/wiki/Pink_Floyd:Another_Brick_In_The_Wall_Part_2
-//<div class="lyricbox">... <div>
-//<!--
-
-//http://www.metrolyrics.com/kill-me-lyrics-pretty-reckless.html
 
 // https://www.songlyrics.com/pink-floyd/another-brick-in-the-wall-pt-2-lyrics/
 // <div id="songLyricsDiv-outer">

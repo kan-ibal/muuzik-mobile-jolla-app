@@ -87,7 +87,7 @@ int main(int argc, char *argv[])
 
     QScopedPointer<QGuiApplication> app(SailfishApp::application(argc, argv));
     //QtWebView::initialize();
-    app->setOrganizationName(QStringLiteral("com.vostoksystem"));
+    app->setOrganizationName(QStringLiteral("com.kan-bal"));
     app->setApplicationName(QStringLiteral("Muuzik!"));
     app->setApplicationVersion(QString(APP_VERSION));
 
@@ -131,7 +131,7 @@ int main(int argc, char *argv[])
 
 
     // set main pages and start
-    view->setSource(SailfishApp::pathTo("qml/harbour-vostok_muuzik.qml"));
+    view->setSource(SailfishApp::pathTo("qml/harbour-muuzik.qml"));
     //view->show();
     view->showFullScreen();
 
