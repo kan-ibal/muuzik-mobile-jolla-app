@@ -9,6 +9,7 @@
  * @param parent
  */
 VolumeProxy::VolumeProxy(QObject *parent) : QObject(parent),
+    pulse(0), iface(0), core(0),
     ok(false),currentStep(0),stepCount(0),highVolumeStep(0){
 
     QDBusInterface ipulse( PULSE_SERVICE,
@@ -31,6 +32,10 @@ VolumeProxy::VolumeProxy(QObject *parent) : QObject(parent),
                                 *pulse, 0 );
     if( iface->isValid()==false)  {
         qDebug() << "can't create pulse interface";
+        delete iface;
+        iface = 0;
+        delete pulse;
+        pulse = 0;
         return;
     }
 
@@ -40,6 +45,12 @@ VolumeProxy::VolumeProxy(QObject *parent) : QObject(parent),
                                *pulse, 0 );
     if( core->isValid()==false)  {
         qDebug() << "can't create pulse core interface";
+        delete core;
+        core = 0;
+        delete iface;
+        iface = 0;
+        delete pulse;
+        pulse = 0;
         return;
     }
 
@@ -117,20 +128,25 @@ VolumeProxy::VolumeProxy(QObject *parent) : QObject(parent),
  * @brief VolumeProxy::~VolumeProxy
  */
 VolumeProxy::~VolumeProxy() {
-    pulse->disconnect("",
-                   MEEGO_VOLUME_OBJ,MEEGO_VOLUME_SERVICE_IF,MEEGO_VOLUME_StepsUpdated,
-                   this,SLOT(StepsUpdatedImpl(quint32,quint32))
-                   );
-    pulse->disconnect("",
-                   MEEGO_VOLUME_OBJ,MEEGO_VOLUME_SERVICE_IF,MEEGO_VOLUME_HighVolumeStep,
-                   this,SLOT(NotifyHighVolumeImpl(quint32))
-                   );
+    if(pulse) {
+        pulse->disconnect("",
+                       MEEGO_VOLUME_OBJ,MEEGO_VOLUME_SERVICE_IF,MEEGO_VOLUME_StepsUpdated,
+                       this,SLOT(StepsUpdatedImpl(quint32,quint32))
+                       );
+        pulse->disconnect("",
+                       MEEGO_VOLUME_OBJ,MEEGO_VOLUME_SERVICE_IF,MEEGO_VOLUME_HighVolumeStep,
+                       this,SLOT(NotifyHighVolumeImpl(quint32))
+                       );
+    }
     stopListeningForSignalImpl(MEEGO_VOLUME_StepsUpdated);
     stopListeningForSignalImpl(MEEGO_VOLUME_HighVolumeStep);
 
     delete iface;
+    iface = 0;
     delete core;
+    core = 0;
     delete pulse;
+    pulse = 0;
 }
 
 /**

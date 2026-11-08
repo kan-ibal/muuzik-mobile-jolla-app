@@ -15,6 +15,7 @@ class DaoIndexeur  : public QObject{
 
 public:
     explicit DaoIndexeur(QObject *parent = 0);
+    virtual ~DaoIndexeur();
 
     /**
      * @brief ajoute une ligne

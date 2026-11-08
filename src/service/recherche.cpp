@@ -8,6 +8,11 @@
 rechercheService::rechercheService(QObject *parent) : QObject(parent), taille(DEF_RECH_TAILLE) {
 }
 
+rechercheService::~rechercheService() {
+    qDeleteAll(liste);
+    liste.clear();
+}
+
 /**
  * @brief rechercheService::getInstance
  * @return
@@ -37,6 +42,7 @@ QList<ResultItem *> rechercheService::rechercher(QString const &str) {
         return liste;
     }
 
+    qDeleteAll(liste);
     liste.clear();
 
     qDebug() << "on recherche : " << str;
@@ -67,6 +73,8 @@ QList<ResultItem *> rechercheService::rechercher(QString const &str) {
         }
     }
 
+    qDeleteAll(s);
+
     emit listeChanged();
 
     return liste;
@@ -80,6 +88,7 @@ void rechercheService::vider() {
         return;
     }
 
+    qDeleteAll(liste);
     liste.clear();
     emit listeChanged();
 }

@@ -151,7 +151,9 @@ Item {
 
             // on reinitialise la pochette au cas on la prochaine ne soit pas trouvé
 //            fond.source = "image://muuzik/img/son?" + Theme.primaryColor
-            ARTService.getArtAsync(t.chemin);
+            if (t) {
+                ARTService.getArtAsync(t.chemin);
+            }
 
             // on peut avoir "sauté" un titre, il faut recalculer
             mettreAJourInfoListe();

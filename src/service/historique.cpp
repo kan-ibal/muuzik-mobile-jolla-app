@@ -24,6 +24,11 @@ HistoriqueService::HistoriqueService(QObject *parent) : QObject(parent) {
     rafraichir();
 }
 
+HistoriqueService::~HistoriqueService() {
+    qDeleteAll(liste);
+    liste.clear();
+}
+
 /**
  * @brief HistoriqueService::getInstance
  * @return
@@ -127,6 +132,7 @@ void HistoriqueService::vider() {
     }
 
     dao.effacer();
+    qDeleteAll(liste);
     liste.clear();
     emit listeChanged();
 }
@@ -156,6 +162,7 @@ void HistoriqueService::rafraichir() {
         r->setOuverture(d->getOuverture());
         liste.append(r);
     }
+    qDeleteAll(s);
 
     // pas besoin fait depuis la db
     //    std::sort(liste.begin(), liste.end(), HistoriqueService::ordreDate);

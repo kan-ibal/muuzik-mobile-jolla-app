@@ -8,7 +8,8 @@
 #include "../app.h"
 #include "../virtualfiles/VFservice.h"
 
-DaoHistorique::DaoHistorique(QObject *parent) : QObject(parent) {
+DaoHistorique::DaoHistorique(QObject *parent) : QObject(parent),
+    insertq(0), insertcountq(0), deletecheminq(0), deleteq(0) {
 
     DB &db = DB::getInstance();
     if(db.isOpen()==false) {
@@ -20,6 +21,17 @@ DaoHistorique::DaoHistorique(QObject *parent) : QObject(parent) {
     insertcountq=db.createStatement("SELECT Count(*) FROM Historique WHERE chemin = ?");
     deletecheminq=db.createStatement("DELETE FROM Historique WHERE chemin = ?");
     deleteq=db.createStatement("DELETE FROM Historique WHERE ouverture <= ?");
+}
+
+DaoHistorique::~DaoHistorique() {
+    delete insertq;
+    delete insertcountq;
+    delete deletecheminq;
+    delete deleteq;
+    insertq = 0;
+    insertcountq = 0;
+    deletecheminq = 0;
+    deleteq = 0;
 }
 
 /**
@@ -170,7 +182,6 @@ QList<RowHistorique *> DaoHistorique::liste(quint16 ordre) {
             r->duree=q.value(4).toInt();
             r->pistes=q.value(5).toInt();
             l.append(r);
-            r->deleteLater();
         }
     }
     q.finish();

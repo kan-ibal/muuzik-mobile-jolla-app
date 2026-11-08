@@ -59,7 +59,7 @@ Item {
 
         onTitreChanged: {
             tempsEcoule = 0;
-            tempsTotal = t.duree;
+            tempsTotal = t ? t.duree : 0;
         }
     }
 

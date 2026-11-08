@@ -15,6 +15,7 @@ class DaoHistorique  : public QObject{
 
 public:
     explicit DaoHistorique(QObject *parent=0);
+    virtual ~DaoHistorique();
 
     /**
      * @brief ajouter une nouvelle entrée

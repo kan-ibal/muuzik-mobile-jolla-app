@@ -6,6 +6,7 @@
 #include <QFuture>
 #include <QtConcurrent/QtConcurrentRun>
 #include <QtAlgorithms>
+#include <QMutexLocker>
 
 #include  <taglib/fileref.h>
 #include  <taglib/tag.h>
@@ -18,7 +19,15 @@
  * @brief MetaDataService::MetaDataService
  * @param parent
  */
-MetaDataService::MetaDataService(QObject *parent) : QObject(parent) {
+MetaDataService::MetaDataService(QObject *parent) : QObject(parent), mutex(QMutex::Recursive) {
+}
+
+MetaDataService::~MetaDataService() {
+    QMutexLocker lock(&mutex);
+    qDeleteAll(cache);
+    cache.clear();
+    qDeleteAll(statCache);
+    statCache.clear();
 }
 
 /**
@@ -52,6 +61,7 @@ void MetaDataService::init(QQmlContext *context, QString name) {
  * @return meta data or null if not found (or can't read)
  */
 MetaData *MetaDataService::getMetaData(const QString & vurl, bool soft) {
+    QMutexLocker lock(&mutex);
     //qDebug() << "MetaDataService::getMetaData " << vurl;
     if(cache.contains(vurl)) {
         return cache.value(vurl);
@@ -88,7 +98,7 @@ MetaData *MetaDataService::getMetaData(const QString & vurl, bool soft) {
                 m1->setArtiste("");
             }
 
-            //delete m2;
+            delete m2;
         }
 
         qDeleteAll(l);
@@ -152,6 +162,9 @@ MetaData *MetaDataService::doGetMetaData(const QString & vurl) {
  */
 QVariant MetaDataService::getMetaDataAsQVariant(const QString & vurl, bool soft) {
     MetaData *m = getMetaData(vurl,soft);
+    if (!m) {
+        return QVariant();
+    }
 
     return QVariant::fromValue( MetaData::copy(m) );
 }
@@ -182,6 +195,7 @@ void MetaDataService::doGet(const QString &vurl,bool soft) {
   * @return temps en seconde
   */
 AlbumStat *MetaDataService::getStatFromAlbum(const QString &vurl) {
+    QMutexLocker lock(&mutex);
 
     if(statCache.contains(vurl)) {
         return statCache.value(vurl);

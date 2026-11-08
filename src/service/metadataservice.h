@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include <QQmlContext>
+#include <QMutex>
 
 #include "../bean/MetaData.h"
 #include "../bean/albumstat.h"
@@ -68,7 +69,9 @@ public:
 
 private:
     explicit MetaDataService(QObject *parent = 0);
+    virtual ~MetaDataService();
 
+    mutable QMutex mutex;
     QHash<QString, MetaData *> cache;
 
     QHash<QString, AlbumStat *> statCache;

@@ -26,6 +26,11 @@ favorisService::favorisService(QObject *parent) : QObject(parent){
     importer();
 }
 
+favorisService::~favorisService() {
+    qDeleteAll(liste);
+    liste.clear();
+}
+
 /**
  * @brief ::getInstance
  * @return
@@ -167,6 +172,7 @@ void favorisService::recharger() {
         f2->setPiste(f->getPiste());
         liste.append(f2);
     }
+    qDeleteAll(l);
 
     classer(configService::getInstance().getOrdreFavoris());
 

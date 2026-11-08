@@ -134,6 +134,8 @@ void paroleService::reponse(QNetworkReply *reply) {
         QUrl newUrl = reply->attribute(QNetworkRequest::RedirectionTargetAttribute).toUrl();
         QNetworkRequest request(newUrl);
         manager->get(request);
+        reply->close();
+        reply->deleteLater();
         return;
     }
 
@@ -166,6 +168,7 @@ void paroleService::reponse(QNetworkReply *reply) {
     emit enCoursChanged();
 
     reply->close();
+    reply->deleteLater();
 }
 
 /**

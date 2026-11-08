@@ -188,6 +188,7 @@ void IndexeurService::recurRechargement(const QString &vurl) {
 
             default:
                 // fail safe
+                delete r;
                 continue;
             }
         }
@@ -336,6 +337,7 @@ void IndexeurService::onMoved(QString vurl, QString as) {
         }
 
         dao.ajouter(r);
+        delete r;
         return;
     }
 

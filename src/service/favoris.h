@@ -24,6 +24,7 @@ class favorisService : public QObject{
 
 public:
     static favorisService& getInstance();
+    virtual ~favorisService();
 
     /**
      * @brief register the service into the context so it can be used in qml

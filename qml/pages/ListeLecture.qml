@@ -385,7 +385,9 @@ Page {
             }
 
             fond.source = "image://muuzik/img/son?" + Theme.primaryColor
-            ARTService.getArtAsync(t.chemin);
+            if (t) {
+                ARTService.getArtAsync(t.chemin);
+            }
         }
     }
 }

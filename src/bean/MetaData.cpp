@@ -71,6 +71,9 @@ QMediaContent MetaData::versMediaContent(MetaData *t) {
  * @return
  */
 MetaData *MetaData::copy(MetaData *obj) {
+    if (!obj) {
+        return NULL;
+    }
     MetaData *t = new MetaData();
 
     t->uuid=obj->uuid;

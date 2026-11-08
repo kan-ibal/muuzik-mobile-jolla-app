@@ -57,6 +57,11 @@ vI18n::vI18n(QObject *parent) : QObject(parent) {
     reload();
 }
 
+vI18n::~vI18n() {
+    qDeleteAll(data);
+    data.clear();
+}
+
 /**
   * reload the database from sources files.
   * This is already done on object (vi18n) initialisation;
@@ -68,7 +73,8 @@ void vI18n::reload() {
 
     available = loadLanguageList();
 
-    data.empty();
+    qDeleteAll(data);
+    data.clear();
 
     data_d =loadTranslation(VI18N_DEF_LNG);
     // let's avoid null pointer

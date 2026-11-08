@@ -14,6 +14,7 @@ class DaoFavoris : public QObject {
 
 public:
     explicit DaoFavoris(QObject *parent = 0);
+    virtual ~DaoFavoris();
 
     /**
      * @brief ajouter l'url à la liste des favoris

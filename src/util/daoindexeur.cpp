@@ -14,7 +14,7 @@ static QRegularExpression separateurrecherche("[ -;.:,_]");
 /**
  * @brief Dao::Dao
  */
-DaoIndexeur::DaoIndexeur(QObject *parent) : QObject(parent){
+DaoIndexeur::DaoIndexeur(QObject *parent) : QObject(parent), insertq(0) {
 
     DB &db = DB::getInstance();
     if(db.isOpen()==false) {
@@ -23,6 +23,11 @@ DaoIndexeur::DaoIndexeur(QObject *parent) : QObject(parent){
     }
 
     insertq = db.createStatement("INSERT INTO Item (nom,chemin,motscles,format) values (?,?,?,?)");
+}
+
+DaoIndexeur::~DaoIndexeur() {
+    delete insertq;
+    insertq = 0;
 }
 
 /**
@@ -224,7 +229,6 @@ QList<RowIndexeur *>  DaoIndexeur::rechercherParVurl(const QString &vurl,quint64
             r->motscles= q.value(2).toString();
             r->format=q.value(3).toInt();
             l.append(r);
-            r->deleteLater();
         }
     }
 

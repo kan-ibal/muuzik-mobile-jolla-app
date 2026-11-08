@@ -633,6 +633,7 @@ QList<VFInfo *> VFService::getSynch(const QString &vurl, const QString &filter, 
     // on filtre les doublons
     foreach (VFInfo *item, tmp) {
         if(hash.contains(item->getVUrl())) {
+            delete item;
             continue;
         }
         list.append(item);
@@ -841,6 +842,11 @@ VFStat *VFService::getStatSynch(const QString &vurl, const QString &filter) {
         //     stat.dirCount  += tmp.dirCount;
         //    stat.fileSize += tmp.fileSize;
         //    stat.fileCount += tmp.fileCount;
+    }
+
+    if(exp != NULL) {
+        delete exp;
+        exp = NULL;
     }
 
     return stat;

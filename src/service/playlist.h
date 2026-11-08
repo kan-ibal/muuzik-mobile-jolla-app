@@ -29,6 +29,7 @@ class playlistService : public QObject {
 public:
     static playlistService& getInstance();
     static void init(QQmlContext *context, QString name = PLAYLISTERVICE_QML_NAME);
+    virtual ~playlistService();
 
     /**
      * @brief retourne la liste de toutes les playlists

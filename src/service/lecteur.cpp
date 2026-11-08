@@ -89,6 +89,8 @@ lecteurService::~lecteurService() {
                        "org.nemomobile.voicecall.VoiceCall",
                        "lineIdChanged",
                        this, SLOT(appelRecu(const QDBusMessage&)));
+
+    liste.clear();
 }
 
 /**
@@ -244,6 +246,7 @@ void lecteurService::finChargementImp(QList<MetaData *>*ll, const qint64 positio
     emit  enCoursChanged();
 
     if(ll->length()==0) {
+        delete ll;
         return;
     }
 
@@ -269,6 +272,8 @@ void lecteurService::finChargementImp(QList<MetaData *>*ll, const qint64 positio
     if(autoplay) {
         lire();
     }
+
+    delete ll;
 }
 
 /**
@@ -395,11 +400,12 @@ MetaData *lecteurService::getTitre() const {
     if( playlist.mediaCount()<=0) {
         return NULL;
     }
-    if( playlist.currentIndex()<0) {
+    int idx = playlist.currentIndex();
+    if( idx < 0 || idx >= liste.size()) {
         return NULL;
     }
 
-    return liste.at(playlist.currentIndex());
+    return liste.at(idx);
 }
 
 /**

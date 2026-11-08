@@ -188,6 +188,8 @@ void lastfmService::reponseNet(QNetworkReply *reply) {
         QUrl newUrl = reply->attribute(QNetworkRequest::RedirectionTargetAttribute).toUrl();
         QNetworkRequest request(newUrl);
         manager->get(request);
+        reply->close();
+        reply->deleteLater();
         return;
     }
 

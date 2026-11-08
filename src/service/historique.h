@@ -17,6 +17,7 @@ class HistoriqueService : public QObject {
 public:
     static HistoriqueService& getInstance();
     static void init(QQmlContext *context, QString name = HISTORIQUESERVICE_QML_NAME);
+    virtual ~HistoriqueService();
 
     /**
      * @brief getListe

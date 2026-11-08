@@ -37,6 +37,11 @@ playlistService::playlistService(QObject *parent) : QObject(parent){
     recharger();
 }
 
+playlistService::~playlistService() {
+    qDeleteAll(liste);
+    liste.clear();
+}
+
 /**
  * @brief playlistService::getInstance
  * @return
@@ -326,12 +331,12 @@ void playlistService::supprimer(const qint64 uuid) {
     if(index==-1) {
         return;
     }
-    Pls *item = liste.at(index);
+    Pls *item = liste.takeAt(index);
 
     QFile f(item->getPath());
     f.remove();
 
-    liste.removeAt(index);
+    delete item;
     emit listeChanged();
 }
 

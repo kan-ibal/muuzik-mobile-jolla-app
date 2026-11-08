@@ -23,6 +23,7 @@ class rechercheService : public QObject
 public:
     static rechercheService& getInstance();
     static void init(QQmlContext *context, QString name = RECHERCHESERVICE_QML_NAME);
+    virtual ~rechercheService();
 
     /**
       * @brief recherche des enregistrement

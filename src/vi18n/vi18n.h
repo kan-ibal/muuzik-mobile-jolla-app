@@ -100,6 +100,7 @@ public:
      * @return
      */
     static vI18n& getInstance();
+    virtual ~vI18n();
 
     /**
 	 * @brief IMPORTANT ! you must register this objet into context to use it into qml; this method do it for you.

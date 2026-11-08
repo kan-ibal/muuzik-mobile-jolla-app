@@ -97,8 +97,8 @@ void QDownloader::onFinished(QNetworkReply * reply) {
 
     if(reply->isOpen()) {
         reply->close();
-        reply->deleteLater();
     }
+    reply->deleteLater();
 
     if(file.isOpen()) {
         file.close();

@@ -7,7 +7,7 @@
 
 #include "../app.h"
 
-DaoFavoris::DaoFavoris(QObject *parent) : QObject(parent) {
+DaoFavoris::DaoFavoris(QObject *parent) : QObject(parent), insertq(0), deleteq(0) {
     DB &db = DB::getInstance();
     if(db.isOpen()==false) {
         qDebug() << "Can't create statement";
@@ -16,6 +16,13 @@ DaoFavoris::DaoFavoris(QObject *parent) : QObject(parent) {
 
     insertq=db.createStatement("INSERT INTO Favoris (nom,chemin,creation,duree,pistes) values (?,?,?,?,?)");
     deleteq=db.createStatement("DELETE FROM Favoris WHERE chemin = ?");
+}
+
+DaoFavoris::~DaoFavoris() {
+    delete insertq;
+    delete deleteq;
+    insertq = 0;
+    deleteq = 0;
 }
 
 /**
@@ -105,7 +112,6 @@ QList<RowFavoris *> DaoFavoris::liste(quint16 ordre) {
             r->duree= q.value(3).toInt();
             r->pistes= q.value(4).toInt();
             l.append(r);
-            r->deleteLater();
         }
     }
     q.finish();
