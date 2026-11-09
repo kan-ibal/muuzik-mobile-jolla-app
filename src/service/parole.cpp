@@ -29,11 +29,10 @@
 
 static QRegExp BLANK("[ -:#';,?&$%()=+\\[\\]!*]");
 static QRegExp NOHTML("<br ?/?>",Qt::CaseInsensitive);
-//static QRegularExpression LY("lyrics-body[\"]>(.*?)div>");
-static QRegularExpression LY("lyrics-body\"[^>]*>(.*?)<\\/p>", QRegularExpression::DotMatchesEverythingOption);
-//static QRegularExpression LY("As you look(.*?)from me");
-// <p id="songLyricsDiv" class="lyrics-body">
-// </div>
+static QRegularExpression LY_CONTAINER("<div[^>]*id=[\"']songLyricsContainer[\"'][^>]*>(.*?)<!--end songLyricsContainer-->", QRegularExpression::DotMatchesEverythingOption | QRegularExpression::CaseInsensitiveOption);
+static QRegularExpression LY_CONTAINER_FALLBACK("<div[^>]*id=[\"']songLyricsContainer[\"'][^>]*>(.*?)(?:<div class=[\"'](?:song-credits|masthead)|<div id=[\"']sl-player-below|<ul class=[\"']albuminfo|<!--end|</div>\\s*</div><!--|$)", QRegularExpression::DotMatchesEverythingOption | QRegularExpression::CaseInsensitiveOption);
+static QRegularExpression LY("lyrics-body\"[^>]*>(.*?)<\\/p>", QRegularExpression::DotMatchesEverythingOption | QRegularExpression::CaseInsensitiveOption);
+static QRegularExpression LY_DIV("id=[\"']songLyricsDiv[\"'][^>]*>(.*?)<\\/p>", QRegularExpression::DotMatchesEverythingOption | QRegularExpression::CaseInsensitiveOption);
 static QRegularExpression DEC("([0-9]+)");
 
 /**
@@ -144,15 +143,79 @@ void paroleService::reponse(QNetworkReply *reply) {
     if(reply->error() == QNetworkReply::NoError) {
         QString tmp(reply->readAll());
 //            qDebug() << "QNetworkReply read tmp: " << tmp;
-        if(!LY.isValid())
-            qDebug() << LY.errorString();
-        QRegularExpressionMatch m=LY.match(tmp);
+        QRegularExpressionMatch m = LY_CONTAINER.match(tmp);
+        if(!m.hasMatch()) {
+            m = LY_CONTAINER_FALLBACK.match(tmp);
+        }
+        if(!m.hasMatch()) {
+            m = LY.match(tmp);
+        }
+        if(!m.hasMatch()) {
+            m = LY_DIV.match(tmp);
+        }
+
         if(m.hasMatch()) {
-//            res.append(paroleService::decode(m.captured(1).replace(NOHTML, RETOURLIGNE)));
             res = m.captured(1);
-// Cleanup HTML tags if needed
-            res.replace("<br />", "\n").remove(QRegularExpression("<[^>]*>"));
-            res.replace(QString("&apos;"), QString("'"),  Qt::CaseInsensitive);
+
+            // Strip scripts and styles
+            res.remove(QRegularExpression("<script[^>]*>.*?</script>", QRegularExpression::DotMatchesEverythingOption | QRegularExpression::CaseInsensitiveOption));
+            res.remove(QRegularExpression("<style[^>]*>.*?</style>", QRegularExpression::DotMatchesEverythingOption | QRegularExpression::CaseInsensitiveOption));
+
+            // Strip HTML comments
+            res.remove(QRegularExpression("<!--.*?-->", QRegularExpression::DotMatchesEverythingOption));
+
+            // Strip widgets, players, and meta sections inside the container
+            res.remove(QRegularExpression("<div[^>]*class=[\"'][^\"']*ringtone-matcher[^\"']*[\"'][^>]*>.*?</div>", QRegularExpression::DotMatchesEverythingOption | QRegularExpression::CaseInsensitiveOption));
+            res.remove(QRegularExpression("<div[^>]*class=[\"'][^\"']*video-link[^\"']*[\"'][^>]*>.*?</div>", QRegularExpression::DotMatchesEverythingOption | QRegularExpression::CaseInsensitiveOption));
+            res.remove(QRegularExpression("<div[^>]*id=[\"']sl-player[^\"']*[\"'][^>]*>.*?</div>", QRegularExpression::DotMatchesEverythingOption | QRegularExpression::CaseInsensitiveOption));
+            res.remove(QRegularExpression("<div[^>]*itemscope[^>]*>.*?</div>", QRegularExpression::DotMatchesEverythingOption | QRegularExpression::CaseInsensitiveOption));
+
+            // Remove and omit ad-zone-reserve blocks (desktop/mobile incontent ads)
+            res.remove("<div class=\"ad-zone-reserve ad-zone-reserve-incontent ad-zone-desktop\"><div data-fuse-pending=\"incontent_1\" data-bp=\"desktop\"></div></div>");
+            res.remove("<div class=\"ad-zone-reserve ad-zone-reserve-incontent ad-zone-mobile\"><div data-fuse-pending=\"incontent_1_mob\" data-bp=\"mobile\"></div></div>");
+            res.remove("<div class=\"ad-zone-reserve ad-zone-reserve-incontent ad-zone-desktop\"><div data-fuse-pending=\"incontent_2\" data-bp=\"desktop\"></div></div>");
+            res.remove("<div class=\"ad-zone-reserve ad-zone-reserve-incontent ad-zone-mobile\"><div data-fuse-pending=\"incontent_2_mob\" data-bp=\"mobile\"></div></div>");
+            res.remove(QRegularExpression("<div[^>]*class=[\"'][^\"']*ad-zone-reserve[^\"']*[\"'][^>]*>(?:(?!<div[^>]*class=[\"'][^\"']*ad-zone-reserve).)*?</div>\\s*</div>", QRegularExpression::DotMatchesEverythingOption | QRegularExpression::CaseInsensitiveOption));
+            res.remove(QRegularExpression("<div[^>]*data-fuse-pending[^>]*>.*?</div>", QRegularExpression::DotMatchesEverythingOption | QRegularExpression::CaseInsensitiveOption));
+            res.remove(QRegularExpression("<div[^>]*class=[\"'][^\"']*ad-zone-reserve[^\"']*[\"'][^>]*>", QRegularExpression::CaseInsensitiveOption));
+
+            // Remove and omit <p class="lyrics-verse">
+            res.remove("<p class=\"lyrics-verse\">");
+            res.remove(QRegularExpression("<p[^>]*class=[\"']lyrics-verse[\"'][^>]*>", QRegularExpression::CaseInsensitiveOption));
+
+            // Line breaks and paragraph formatting
+            res.replace(QRegularExpression("<br\\s*/?>", QRegularExpression::CaseInsensitiveOption), "\n");
+            res.replace(QRegularExpression("</p>", QRegularExpression::CaseInsensitiveOption), "\n\n");
+
+            // Strip any remaining HTML tags
+            res.remove(QRegularExpression("<[^>]*>"));
+
+            // Decode HTML entities
+            res.replace(QString("&apos;"), QString("'"), Qt::CaseInsensitive);
+            res.replace(QString("&#039;"), QString("'"), Qt::CaseInsensitive);
+            res.replace(QString("&#39;"), QString("'"), Qt::CaseInsensitive);
+            res.replace(QString("&quot;"), QString("\""), Qt::CaseInsensitive);
+            res.replace(QString("&amp;"), QString("&"), Qt::CaseInsensitive);
+            res.replace(QString("&lt;"), QString("<"), Qt::CaseInsensitive);
+            res.replace(QString("&gt;"), QString(">"), Qt::CaseInsensitive);
+            res.replace(QString("&nbsp;"), QString(" "), Qt::CaseInsensitive);
+            res.replace(QString("&#145;"), QString("'"), Qt::CaseInsensitive);
+            res.replace(QString("&#146;"), QString("'"), Qt::CaseInsensitive);
+            res.replace(QString("&#147;"), QString("\""), Qt::CaseInsensitive);
+            res.replace(QString("&#148;"), QString("\""), Qt::CaseInsensitive);
+            res.replace(QString("&rsquo;"), QString("'"), Qt::CaseInsensitive);
+            res.replace(QString("&lsquo;"), QString("'"), Qt::CaseInsensitive);
+            res.replace(QString("&rdquo;"), QString("\""), Qt::CaseInsensitive);
+            res.replace(QString("&ldquo;"), QString("\""), Qt::CaseInsensitive);
+
+            // Clean newlines
+            res.replace(QString("\r"), QString(""));
+            res.replace(QRegularExpression("\n{3,}"), "\n\n");
+            res = res.trimmed();
+
+            if(res.startsWith("We do not have the lyrics for", Qt::CaseInsensitive)) {
+                res.clear();
+            }
 //            qDebug() << "RegExpr read res: " << res;
         }
     }

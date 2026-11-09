@@ -9,6 +9,8 @@ Name:       harbour-muuzik
 %define _binary_payload w9.gzdio
 %define _source_payload w9.gzdio
 # << macros
+%define _binary_payload w9.gzdio
+%define _source_payload w9.gzdio
 
 %{!?qtc_qmake:%define qtc_qmake %qmake}
 %{!?qtc_qmake5:%define qtc_qmake5 %qmake5}
@@ -22,8 +24,8 @@ License:    MPLv2
 URL:        https://github.com/kan-ibal/muuzik-mobile-jolla-app
 Source0:    %{name}-%{version}.tar.bz2
 Source100:  harbour-muuzik.yaml
+Requires:   sailfish-version >= 5.1
 Requires:   sailfishsilica-qt5 >= 0.10.9
-Requires:       sailfish-version >= 5.1
 BuildRequires:  pkgconfig(sailfishapp) >= 1.0.2
 BuildRequires:  pkgconfig(Qt5Core)
 BuildRequires:  pkgconfig(Qt5Qml)

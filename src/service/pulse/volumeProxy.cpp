@@ -82,18 +82,18 @@ VolumeProxy::VolumeProxy(QObject *parent) : QObject(parent),
                             "/com/meego/mainvolume2",
                             "org.freedesktop.DBus.Properties",
                             *pulse, 0 );
-      qDebug() << "interface valide ? " <<  iii.isValid();
+      qDebug() << "valid interface ? " <<  iii.isValid();
       if( iii.isValid()==false)  {
           qDebug() << "---------------------------------";
           return;
       }
-      qDebug() << "lecture du volume par interface free desk";
+      qDebug() << "reading the volume via the Free Desk interface";
       QDBusMessage riii = iii.call( "Get","com.Meego.MainVolume2", "CurrentStep");
       if(riii.type() != QDBusMessage::ErrorMessage) {
-          qDebug() << "Mainteant lecture volume " <<
+          qDebug() << "Now read the volume" <<
                       riii.arguments()[0].value<QDBusVariant>().variant().value<quint32>();
       } else {
-          qDebug() << "ben non";
+          qDebug() << "well, not really";
       }
 
 
@@ -103,19 +103,19 @@ VolumeProxy::VolumeProxy(QObject *parent) : QObject(parent),
                        "/com/meego/mainvolume2",
                        "com.Meego.MainVolume2",
                        *pulse, 0 );
-    qDebug() << "i2 valide ? " <<  i2.isValid();
+    qDebug() << "i2 valid ? " <<  i2.isValid();
     if( i2.isValid()==false)  {
         qDebug() << "interface PAS ok";
         qDebug() << "---------------------------------";
         return;
     }
-    qDebug() << "lecture du volume par i2";
+    qDebug() << "reading the volume using i2";
     QDBusMessage r2 = i2.call("CurrentStep");
     if(r2.type() != QDBusMessage::ErrorMessage) {
-        qDebug() << "Mainteant lecture volume " <<
+        qDebug() << "Now read the volume " <<
                     r2.arguments()[0].value<QDBusVariant>().variant().value<quint32>();
     } else {
-        qDebug() << "ben non";
+        qDebug() << "well, not really";
     }
 
 
