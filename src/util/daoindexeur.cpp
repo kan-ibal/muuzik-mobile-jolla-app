@@ -186,7 +186,6 @@ QList<RowIndexeur *> DaoIndexeur::rechercher(const QString &str,quint64 max) {
             r->motscles= q.value(2).toString();
             r->format=q.value(3).toInt();
             l.append(r);
-            r->deleteLater();
         }
     }
 

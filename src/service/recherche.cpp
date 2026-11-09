@@ -47,12 +47,9 @@ QList<ResultItem *> rechercheService::rechercher(QString const &str) {
         return liste;
     }
 
-    qDeleteAll(liste);
-    liste.clear();
-
     QString query = str.trimmed();
     if(query.isEmpty()) {
-        emit listeChanged();
+        vider();
         return liste;
     }
 
@@ -67,97 +64,96 @@ QList<ResultItem *> rechercheService::rechercher(QString const &str) {
 
     DB &db = DB::getInstance();
     if(db.isOpen()) {
-        // 1. Search for Albums (directories) whose album name, artist, or keywords match the query
-        QSqlQuery q = db.createQuery();
-        if(q.exec("SELECT nom, chemin, motscles FROM Item WHERE format = 0")) {
-            while(q.next()) {
-                QString nom = q.value(0).toString();
-                QString chemin = q.value(1).toString();
-                QString motscles = q.value(2).toString();
+        // 1. Search for Albums (directories, format = 0) matching the query
+        QSqlQuery qAlbum = db.createQuery();
+        qAlbum.prepare("SELECT nom, chemin, motscles FROM Item WHERE format = 0 AND (motscles LIKE ? OR nom LIKE ?) LIMIT ?");
+        qAlbum.bindValue(0, "%" + query.toLower() + "%");
+        qAlbum.bindValue(1, "%" + query + "%");
+        qAlbum.bindValue(2, (qulonglong)taille);
 
-                if(!VFI.exist(chemin)) {
+        if(qAlbum.exec()) {
+            while(qAlbum.next()) {
+                QString nom = qAlbum.value(0).toString();
+                QString chemin = qAlbum.value(1).toString();
+
+                if(!VFI.exist(chemin) || addedVurls.contains(chemin)) {
                     continue;
                 }
+                addedVurls.insert(chemin);
 
-                QString albumName;
-                QString artistName;
-
+                QString displayName = nom;
                 MetaData *m = MetaDataService::getInstance().getMetaData(chemin, true);
-                if(m != NULL) {
-                    albumName = m->getAlbum();
-                    artistName = m->getArtiste();
-                }
-
-                if(albumName.isEmpty()) {
-                    AlbumStat *stat = MetaDataService::getInstance().getStatFromAlbum(chemin);
-                    if(stat != NULL) {
-                        albumName = stat->getAlbum();
-                        if(artistName.isEmpty()) {
-                            artistName = stat->getArtiste();
-                        }
+                if(m != NULL && !m->getAlbum().isEmpty()) {
+                    if(!m->getArtiste().isEmpty()) {
+                        displayName = m->getArtiste() + " - " + m->getAlbum();
+                    } else {
+                        displayName = m->getAlbum();
                     }
                 }
 
-                bool match = false;
-                if(!albumName.isEmpty() && albumName.contains(query, Qt::CaseInsensitive)) {
-                    match = true;
-                } else if(!albumName.isEmpty() && !artistName.isEmpty() &&
-                          (artistName + " " + albumName).contains(query, Qt::CaseInsensitive)) {
-                    match = true;
-                } else if(nom.contains(query, Qt::CaseInsensitive)) {
-                    match = true;
-                } else if(motscles.contains(query.toLower())) {
-                    match = true;
-                } else if(tokens.length() > 0) {
-                    QString haystack = (albumName + " " + artistName + " " + nom + " " + motscles).toLower();
-                    bool allMatch = true;
-                    foreach(const QString &tok, tokens) {
-                        if(tok.length() >= 2 && !haystack.contains(tok.toLower())) {
-                            allMatch = false;
-                            break;
-                        }
-                    }
-                    if(allMatch) {
-                        match = true;
-                    }
-                }
+                ResultItem *r = new ResultItem(this);
+                r->setName(displayName);
+                r->setVurl(chemin);
+                r->setType(VFInfo::VFType::DIRECTORY);
+                albumResults.append(r);
+            }
+        }
+        qAlbum.finish();
 
-                if(match && !addedVurls.contains(chemin)) {
+        // If tokens > 1 and quota not reached, also search with token conjunction
+        if((quint64)albumResults.length() < taille && tokens.length() > 1) {
+            QStringList conds;
+            for(int i = 0; i < tokens.length(); ++i) {
+                conds.append("motscles LIKE ?");
+            }
+            QSqlQuery qTok = db.createQuery();
+            qTok.prepare("SELECT nom, chemin, motscles FROM Item WHERE format = 0 AND (" + conds.join(" AND ") + ") LIMIT ?");
+            for(int i = 0; i < tokens.length(); ++i) {
+                qTok.bindValue(i, "%" + tokens.at(i).toLower() + "%");
+            }
+            qTok.bindValue(tokens.length(), (qulonglong)(taille - albumResults.length()));
+            if(qTok.exec()) {
+                while(qTok.next()) {
+                    QString nom = qTok.value(0).toString();
+                    QString chemin = qTok.value(1).toString();
+
+                    if(!VFI.exist(chemin) || addedVurls.contains(chemin)) {
+                        continue;
+                    }
                     addedVurls.insert(chemin);
 
-                    QString displayName;
-                    if(!artistName.isEmpty() && !albumName.isEmpty()) {
-                        displayName = artistName + " - " + albumName;
-                    } else if(!albumName.isEmpty()) {
-                        displayName = albumName;
-                    } else {
-                        displayName = nom;
+                    QString displayName = nom;
+                    MetaData *m = MetaDataService::getInstance().getMetaData(chemin, true);
+                    if(m != NULL && !m->getAlbum().isEmpty()) {
+                        if(!m->getArtiste().isEmpty()) {
+                            displayName = m->getArtiste() + " - " + m->getAlbum();
+                        } else {
+                            displayName = m->getAlbum();
+                        }
                     }
 
-                    ResultItem *r = new ResultItem();
+                    ResultItem *r = new ResultItem(this);
                     r->setName(displayName);
                     r->setVurl(chemin);
                     r->setType(VFInfo::VFType::DIRECTORY);
                     albumResults.append(r);
-
-                    if((quint64)albumResults.length() >= taille) {
-                        break;
-                    }
                 }
             }
+            qTok.finish();
         }
 
-        // 2. Search Favoris and Historique for matching album names if quota not reached
+        // 2. Search Favoris for matching album names if quota not reached
         if((quint64)albumResults.length() < taille) {
             QSqlQuery qFav = db.createQuery();
-            qFav.prepare("SELECT nom, chemin FROM Favoris WHERE nom LIKE ? LIMIT 10");
+            qFav.prepare("SELECT nom, chemin FROM Favoris WHERE nom LIKE ? LIMIT ?");
             qFav.bindValue(0, "%" + query + "%");
+            qFav.bindValue(1, (qulonglong)(taille - albumResults.length()));
             if(qFav.exec()) {
                 while(qFav.next()) {
                     QString chemin = qFav.value(1).toString();
                     if(!addedVurls.contains(chemin) && VFI.exist(chemin)) {
                         addedVurls.insert(chemin);
-                        ResultItem *r = new ResultItem();
+                        ResultItem *r = new ResultItem(this);
                         r->setName(qFav.value(0).toString());
                         r->setVurl(chemin);
                         r->setType(VFInfo::VFType::DIRECTORY);
@@ -165,18 +161,21 @@ QList<ResultItem *> rechercheService::rechercher(QString const &str) {
                     }
                 }
             }
+            qFav.finish();
         }
 
+        // 3. Search Historique for matching album names if quota not reached
         if((quint64)albumResults.length() < taille) {
             QSqlQuery qHist = db.createQuery();
-            qHist.prepare("SELECT nom, chemin FROM Historique WHERE nom LIKE ? LIMIT 10");
+            qHist.prepare("SELECT nom, chemin FROM Historique WHERE nom LIKE ? LIMIT ?");
             qHist.bindValue(0, "%" + query + "%");
+            qHist.bindValue(1, (qulonglong)(taille - albumResults.length()));
             if(qHist.exec()) {
                 while(qHist.next()) {
                     QString chemin = qHist.value(1).toString();
                     if(!addedVurls.contains(chemin) && VFI.exist(chemin)) {
                         addedVurls.insert(chemin);
-                        ResultItem *r = new ResultItem();
+                        ResultItem *r = new ResultItem(this);
                         r->setName(qHist.value(0).toString());
                         r->setVurl(chemin);
                         r->setType(VFInfo::VFType::DIRECTORY);
@@ -184,19 +183,23 @@ QList<ResultItem *> rechercheService::rechercher(QString const &str) {
                     }
                 }
             }
+            qHist.finish();
         }
     }
 
-    // 3. Search via DaoIndexeur (standard keyword search for tracks and items)
+    // 4. Search via DaoIndexeur (standard keyword search for tracks and items)
     QList<RowIndexeur *> s = dao.rechercher(query, taille * 2);
     foreach (RowIndexeur *d, s) {
+        if(d == NULL) {
+            continue;
+        }
         if(addedVurls.contains(d->getChemin()) || VFI.exist(d->getChemin()) == false) {
             continue;
         }
 
         addedVurls.insert(d->getChemin());
 
-        ResultItem *r = new ResultItem();
+        ResultItem *r = new ResultItem(this);
         QString displayName = d->getNom();
 
         if(d->getFormat() == 0) {
@@ -220,11 +223,12 @@ QList<ResultItem *> rechercheService::rechercher(QString const &str) {
     }
     qDeleteAll(s);
 
-    // 4. Combine results: Albums first, then tracks/items up to taille limit
+    // 5. Combine results: Albums first, then tracks/items up to taille limit
+    QList<ResultItem *> newResults;
     quint64 totalAdded = 0;
     foreach(ResultItem *r, albumResults) {
         if(totalAdded < taille) {
-            liste.append(r);
+            newResults.append(r);
             totalAdded++;
         } else {
             delete r;
@@ -233,14 +237,21 @@ QList<ResultItem *> rechercheService::rechercher(QString const &str) {
 
     foreach(ResultItem *r, itemResults) {
         if(totalAdded < taille) {
-            liste.append(r);
+            newResults.append(r);
             totalAdded++;
         } else {
             delete r;
         }
     }
 
+    QList<ResultItem *> toDelete = liste;
+    liste = newResults;
     emit listeChanged();
+    foreach(ResultItem *r, toDelete) {
+        if(r) {
+            r->deleteLater();
+        }
+    }
 
     return liste;
 }
@@ -253,9 +264,14 @@ void rechercheService::vider() {
         return;
     }
 
-    qDeleteAll(liste);
+    QList<ResultItem *> toDelete = liste;
     liste.clear();
     emit listeChanged();
+    foreach(ResultItem *r, toDelete) {
+        if(r) {
+            r->deleteLater();
+        }
+    }
 }
 
 /**
@@ -275,6 +291,9 @@ void rechercheService::setTaille(quint64 v) {
 ResultItem *rechercheService::rechercheAleatoire(qint8 support) {
 
     QScopedPointer<RowIndexeur> d(dao.rechercheAleatoire(support));
+    if(d.isNull() || d->getChemin().isEmpty()) {
+        return NULL;
+    }
 
     ResultItem *r=new ResultItem();
     QString displayName = d->getNom();

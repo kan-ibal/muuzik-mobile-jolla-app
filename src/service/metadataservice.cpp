@@ -129,8 +129,9 @@ MetaData *MetaDataService::doGetMetaData(const QString & vurl) {
     QString path = VFI.getPathFromVUrl(vurl);
     TagLib::FileRef fr(path.toUtf8().constData() );
     if( fr.isNull()==false) {
-
-        m->setDuree(fr.audioProperties()->length());
+        if(fr.audioProperties() != NULL) {
+            m->setDuree(fr.audioProperties()->length());
+        }
         if(fr.tag() != NULL ) {
             m->setTitre(QString(fr.tag()->title().toCString(true)));
             m->setAlbum(QString(fr.tag()->album().toCString(true)));

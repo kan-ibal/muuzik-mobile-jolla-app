@@ -18,7 +18,8 @@ class rechercheService : public QObject
     Q_OBJECT
 
     Q_PROPERTY(QQmlListProperty<ResultItem> liste READ getListe NOTIFY listeChanged )
-    Q_PROPERTY(bool taille READ getTaille WRITE setTaille NOTIFY tailleChanged )
+    Q_PROPERTY(int count READ getCount NOTIFY listeChanged )
+    Q_PROPERTY(quint64 taille READ getTaille WRITE setTaille NOTIFY tailleChanged )
 
 public:
     static rechercheService& getInstance();
@@ -37,6 +38,10 @@ public:
      */
     QQmlListProperty<ResultItem> getListe() {
         return QQmlListProperty<ResultItem>(this, liste);
+    }
+
+    Q_INVOKABLE int getCount() const {
+        return liste.count();
     }
 
     /**

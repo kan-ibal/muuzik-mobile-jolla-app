@@ -40,6 +40,11 @@ Page {
         id: itemHolder
 
         ListItem {
+            id: itemDelegate
+            property string itemVurl: vurl
+            property string itemName: name
+            property int itemType: type
+
             menu: contextMenu
             width: ListView.view.width
             contentHeight: Math.max(img.height,description.height) +
@@ -63,26 +68,26 @@ Page {
                     rightMargin: Theme.horizontalPageMargin
                     verticalCenter: parent.verticalCenter
                 }
-                text:name
+                text: itemDelegate.itemName
                 value: ""
                 highlighted: false;
             }
 
             Component.onCompleted: {
-                switch(type) {
+                switch(itemDelegate.itemType) {
                     //---------------
                 case VFInfo.DIRECTORY :
                     img.source = "image://theme/icon-m-folder?" + Theme.primaryColor;
-                    ARTService.getArtAsync(vurl);
+                    ARTService.getArtAsync(itemDelegate.itemVurl);
 
-                    MetaDataService.getStatFromAlbumASynch(vurl);
+                    MetaDataService.getStatFromAlbumASynch(itemDelegate.itemVurl);
                     break;
 
                     //---------------
                 case VFInfo.FILE :
                     img.source = "image://muuzik/img/son?"+Theme.primaryColor;
 
-                    MetaDataService.getMetaDataASynch(vurl);
+                    MetaDataService.getMetaDataASynch(itemDelegate.itemVurl);
                     break;
                 }
             }
@@ -90,7 +95,7 @@ Page {
             Connections {
                 target: ARTService
                 onArtFound : {
-                    if( model.vurl !== vurl) {
+                    if(itemDelegate.itemVurl !== vurl) {
                         return;
                     }
 
@@ -102,7 +107,7 @@ Page {
                 target: MetaDataService
 
                 onMetaDataAvailable: {
-                    if(model.vurl !== vurl) {
+                    if(itemDelegate.itemVurl !== vurl || !meta) {
                         return;
                     }
 
@@ -130,25 +135,25 @@ Page {
                 }
 
                 onStatAvailable: {
-                    if(model.vurl !== vurl) {
+                    if(itemDelegate.itemVurl !== vurl || !stat) {
                         return;
                     }
 
-                    description.value = time > 0 ?
+                    description.value = stat.duree > 0 ?
                                 vi18n.get("favoris.description").arg(App.getDuree(stat.duree)).arg(stat.pistes) :
                                 vi18n.get("favoris.description.simple").arg(stat.pistes)
                 }
             }
 
             onClicked: {
-                console.log("va " + vurl)
+                console.log("va " + itemDelegate.itemVurl)
 
-                switch(type) {
+                switch(itemDelegate.itemType) {
                 case VFInfo.DIRECTORY :
-                    ecouter(vurl);
+                    ecouter(itemDelegate.itemVurl);
                     break;
                 case  VFInfo.FILE :
-                    ajouterdirect(vurl);
+                    ajouterdirect(itemDelegate.itemVurl);
                     break;
                 }
 
@@ -159,15 +164,15 @@ Page {
                 ContextMenu {
                     MenuItem {
                         text:  vi18n.get("navigateur.rep.voir")
-                        onClicked: openUri( type === VFInfo.DIRECTORY ? vurl : App.getRepParent(vurl) )
+                        onClicked: openUri( itemDelegate.itemType === VFInfo.DIRECTORY ? itemDelegate.itemVurl : App.getRepParent(itemDelegate.itemVurl) )
                     }
                     MenuItem {
                         text:  vi18n.get("navigateur.rep.ajouter")
-                        onClicked: ajouter(vurl)
+                        onClicked: ajouter(itemDelegate.itemVurl)
                     }
                     MenuItem {
                         text:  vi18n.get("navigateur.rep.ecouter")
-                        onClicked:  ecouter(vurl)
+                        onClicked:  ecouter(itemDelegate.itemVurl)
                     }
                 }
             }
@@ -222,6 +227,8 @@ Page {
             onTextChanged: {
                 peutvide=false;
                 if(text.length==0) {
+                    actuel = "";
+                    li.currentIndex = -1;
                     RechercherService.vider();
                     peutvide=false;
                     autorech.stop();
@@ -255,7 +262,7 @@ Page {
 
             Label {
                 text:vi18n.get("recherche.vide")
-                visible: RechercherService.liste.length===0 && peutvide
+                visible: (RechercherService.count === 0) && peutvide
                 color: Theme.highlightColor
                 anchors {
                     horizontalCenter: parent.horizontalCenter

@@ -1,5 +1,5 @@
 /**
-  * @brief formate une durée numerique en chîne lisible
+  * @brief formats a numeric duration into a human-readable string
   */
 var getDuree = function (d) {
     try {
@@ -20,9 +20,9 @@ var getDuree = function (d) {
 
 
 /**
-  *retourne la taille en format "humain"
-  *param v : tailel en octet
-  *return chaine corespondante : xMb, Gb...
+  *converts the size to a ‘human-readable’ format
+  *param v: size in bytes
+  *returns the corresponding string: xMb, Gb...
   */
 var getTaille=function(v, precision) {
     precision = typeof precision === "undefined" ? 1 : precision;
@@ -42,7 +42,7 @@ var getTaille=function(v, precision) {
 
 
 /**
-  * @ brief retourne le rep parent de v
+  * @brief returns the parent rep of v
   */
 var getRepParent=function(v) {
     var a = /(.*)\/[^\/]+$/.exec(v);
@@ -54,7 +54,7 @@ var getRepParent=function(v) {
 }
 
 /**
-  * @brief retourne le nom du fichir depuis un path
+  * @brief function returns the filename from a path
   */
 var getNom=function(v) {
     var a = /([^/]+)$/.exec(v);
@@ -69,7 +69,7 @@ var getNom=function(v) {
 }
 
 /**
-  * @brief retourne le non simple - sans path ou extension depuis un path
+  * @brief returns “no” – without a path or extension when a path is provided
   */
 var getNomSimple=function(v) {
     var a = /([^/]*)\\.[^\\.]+/.exec(v);
