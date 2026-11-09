@@ -31,6 +31,8 @@ class qnetworkwatcher : public QObject {
     Q_PROPERTY(bool wcdma READ getWcdma NOTIFY wcdmaOn)
     // is ethernet up ?
     Q_PROPERTY(bool eth READ getEthernet NOTIFY ethOn)
+    // is vpn up ?
+    Q_PROPERTY(bool vpn READ getVpn NOTIFY vpnOn)
     // is network down ?
     Q_PROPERTY(bool connected READ getConnected NOTIFY connectedChanged)
 
@@ -51,6 +53,7 @@ public:
 
     /**
       * @brief return current state of network connection : 0 none, 1 has 3g/4g, 2 wifi on
+      * VPN via wifi is treated as wifi (NetworkType::WIFI), and VPN via WCDMA/LTE is treated as mobile (NetworkType::WCDMA)
       * @return
       */
     Q_INVOKABLE NetworkType::Type getNetwork() const {
@@ -58,7 +61,7 @@ public:
     }
 
     /**
-      * @brief is wifi up ?
+      * @brief is wifi up ? (treated as true for direct wifi or VPN via wifi)
       * @return true if has wifi
       */
     Q_INVOKABLE bool getWifi() const {
@@ -66,7 +69,7 @@ public:
     }
 
     /**
-      * @brief is wcdma up ?
+      * @brief is wcdma up ? (treated as true for direct mobile or VPN via WCDMA/LTE)
       * @return true if has 3g/4g
       */
     Q_INVOKABLE bool getWcdma() const {
@@ -82,6 +85,14 @@ public:
     }
 
     /**
+      * @brief is vpn up ?
+      * @return true if an active VPN connection is established
+      */
+    Q_INVOKABLE bool getVpn() const {
+        return isVpnActive;
+    }
+
+    /**
       * @brief is network down (no connection) ?
       * @return true if network, else false (down)
       */
@@ -94,12 +105,18 @@ private :
 
     QNetworkConfigurationManager net;
     NetworkType::Type network;
+    bool isVpnActive;
 
     void checkNetwork();
+    void queryConnMan(bool &hasWifi, bool &hasCellular, bool &hasEth, bool &hasVpn);
+    void queryConfigurations(bool &hasWifi, bool &hasCellular, bool &hasEth, bool &hasVpn);
+    void queryInterfaces(bool &hasWifi, bool &hasCellular, bool &hasEth, bool &hasVpn);
+    void queryRoutes(bool &hasWifi, bool &hasCellular, bool &hasEth, bool &hasVpn);
 
 private slots:
     void configurationChanged(const QNetworkConfiguration&);
     void onlineStateChanged(bool);
+    void servicesChanged();
 
 signals:
     /**
@@ -131,6 +148,17 @@ signals:
      * this signal emit on change only, not on startup
      */
     void ethOn();
+
+    /**
+     * @brief switched to vpn / vpn state changed
+     * this signal emit on change only, not on startup
+     */
+    void vpnOn();
+
+    /**
+     * @brief vpn status changed
+     */
+    void vpnChanged();
 };
 
 #endif // QNETWORKWATCHER_H

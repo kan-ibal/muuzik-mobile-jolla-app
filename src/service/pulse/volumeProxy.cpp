@@ -124,11 +124,18 @@ VolumeProxy::VolumeProxy(QObject *parent) : QObject(parent),
 
 }
 
-/**
- * @brief VolumeProxy::~VolumeProxy
- */
-VolumeProxy::~VolumeProxy() {
-    if(pulse) {
+void VolumeProxy::cleanup() {
+    if (core) {
+        stopListeningForSignalImpl(MEEGO_VOLUME_StepsUpdated);
+        stopListeningForSignalImpl(MEEGO_VOLUME_HighVolumeStep);
+        delete core;
+        core = 0;
+    }
+    if (iface) {
+        delete iface;
+        iface = 0;
+    }
+    if (pulse) {
         pulse->disconnect("",
                        MEEGO_VOLUME_OBJ,MEEGO_VOLUME_SERVICE_IF,MEEGO_VOLUME_StepsUpdated,
                        this,SLOT(StepsUpdatedImpl(quint32,quint32))
@@ -137,16 +144,18 @@ VolumeProxy::~VolumeProxy() {
                        MEEGO_VOLUME_OBJ,MEEGO_VOLUME_SERVICE_IF,MEEGO_VOLUME_HighVolumeStep,
                        this,SLOT(NotifyHighVolumeImpl(quint32))
                        );
+        QDBusConnection::disconnectFromPeer(PULSE_PEER);
+        delete pulse;
+        pulse = 0;
     }
-    stopListeningForSignalImpl(MEEGO_VOLUME_StepsUpdated);
-    stopListeningForSignalImpl(MEEGO_VOLUME_HighVolumeStep);
+    ok = false;
+}
 
-    delete iface;
-    iface = 0;
-    delete core;
-    core = 0;
-    delete pulse;
-    pulse = 0;
+/**
+ * @brief VolumeProxy::~VolumeProxy
+ */
+VolumeProxy::~VolumeProxy() {
+    cleanup();
 }
 
 /**
@@ -172,7 +181,7 @@ void VolumeProxy::init(QQmlContext *context, QString name) {
  * @param v
  */
 void VolumeProxy::setCurrentStep(quint32 v) {
-    if(ok==false) {
+    if(ok==false || !iface) {
         return;
     }
 
@@ -199,6 +208,7 @@ void VolumeProxy::setCurrentStep(quint32 v) {
  * @return
  */
 quint32 VolumeProxy::getCurrentStepImpl() {
+    if(!iface) return 0;
 
     QDBusMessage r1 = iface->call( "Get",MEEGO_VOLUME_SERVICE_IF,MEEGO_VOLUME_CurrentStep );
     if(r1.type() == QDBusMessage::ErrorMessage) {
@@ -216,6 +226,7 @@ quint32 VolumeProxy::getCurrentStepImpl() {
  * @return
  */
 quint32 VolumeProxy::getStepCountImpl() {
+    if(!iface) return 0;
 
     QDBusMessage r1 = iface->call( "Get",MEEGO_VOLUME_SERVICE_IF, MEEGO_VOLUME_StepCount);
     if(r1.type() == QDBusMessage::ErrorMessage) {
@@ -233,6 +244,8 @@ quint32 VolumeProxy::getStepCountImpl() {
  * @return
  */
 quint32 VolumeProxy::getHighVolumeStepImpl() {
+    if(!iface) return 0;
+
     QDBusMessage r1 = iface->call( "Get",MEEGO_VOLUME_SERVICE_IF, MEEGO_VOLUME_HighVolumeStep);
     if(r1.type() == QDBusMessage::ErrorMessage) {
         qDebug() << "GET HighVolumeStep : " << r1.errorMessage();

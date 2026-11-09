@@ -37,8 +37,12 @@ Page {
                 }
 
                 main.visible=false;
-                web.visible=true;
-                web.url=tmp;
+                webLoader.targetUrl = tmp;
+                webLoader.active = true;
+                webLoader.visible = true;
+                if (webLoader.item) {
+                    webLoader.item.url = tmp;
+                }
                 return;
             }
 
@@ -126,13 +130,29 @@ Page {
         }
     }
 
-    WebView {
-        id: web
-        url: web.url
-        visible: false
+    Loader {
+        id: webLoader
         anchors.fill: parent
-        width: parent.width
-//        experimental.userAgent:"Mozilla/5.0 (Linux; U; Android 4.0.3; ko-kr; LG-L160L Build/IML74K) AppleWebkit/534
+        visible: false
+        active: false
+        property string targetUrl: ""
+        onLoaded: {
+            if (item && targetUrl.length > 0) {
+                item.url = targetUrl;
+            }
+        }
+        sourceComponent: Component {
+            WebView {
+                anchors.fill: parent
+            }
+        }
+    }
+
+    Component.onDestruction: {
+        if (webLoader.item) {
+            webLoader.item.url = "about:blank";
+        }
+        webLoader.active = false;
     }
 
     Attente {

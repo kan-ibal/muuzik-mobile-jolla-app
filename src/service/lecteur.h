@@ -109,13 +109,13 @@ public:
      * @brief duree dans le titre en cours
      * @return
      */
-    Q_INVOKABLE qint64 getDureeTitre() const {return media.duration()/1000;}
+    Q_INVOKABLE qint64 getDureeTitre() const { return media ? media->duration()/1000 : 0; }
 
     /**
      * @brief taille de la playlist
      * @return
      */
-    Q_INVOKABLE qint64 getTaille() const { return playlist.mediaCount(); }
+    Q_INVOKABLE qint64 getTaille() const { return playlist ? playlist->mediaCount() : 0; }
 
     /**
      * @brief effacer la liste et eventuellement arreter la lecture
@@ -152,6 +152,11 @@ public:
     Q_INVOKABLE void stopper();
 
     /**
+     * @brief arrete et libere proprement le media player et dbus
+     */
+    Q_INVOKABLE void arreter();
+
+    /**
      * @brief passe à la piste suivant si possible.
      * si en pause, lance la lecture
      * @return vrai si passe à la piste suivant
@@ -176,25 +181,25 @@ public:
       * @brief retourne l'etat du player
       * @return true si en lecture, sinon false
       */
-    Q_INVOKABLE bool getEtat() const {return media.state() == QMediaPlayer::PlayingState;}
+    Q_INVOKABLE bool getEtat() const { return media ? (media->state() == QMediaPlayer::PlayingState) : false; }
 
     /**
       * @brief retourne la piste en position de lecture
       * @return
       */
-    Q_INVOKABLE  int getIndex() const { return playlist.currentIndex(); }
+    Q_INVOKABLE int getIndex() const { return playlist ? playlist->currentIndex() : -1; }
 
     /**
       * @brief retourne la position en seconde du titre en cours
       * @return
       */
-    Q_INVOKABLE  int getPosition() const { return media.position()/1000; }
+    Q_INVOKABLE int getPosition() const { return media ? media->position()/1000 : 0; }
 
     /**
      * @brief getAleatoire
      * @return
      */
-    bool getAleatoire() { return playlist.playbackMode() == QMediaPlaylist::Random;    }
+    bool getAleatoire() { return playlist ? (playlist->playbackMode() == QMediaPlaylist::Random) : false; }
 
     /**
       * @brief setAleatoire
@@ -205,7 +210,7 @@ public:
      * @brief getBoucle
      * @return
      */
-    bool getBoucle() { return playlist.playbackMode() == QMediaPlaylist::Loop;    }
+    bool getBoucle() { return playlist ? (playlist->playbackMode() == QMediaPlaylist::Loop) : false; }
 
     /**
       * @brief setBoucle
@@ -237,8 +242,8 @@ private:
     explicit lecteurService(QObject *parent = 0);
     ~lecteurService();
 
-    QMediaPlayer media;
-    QMediaPlaylist playlist;
+    QMediaPlayer *media;
+    QMediaPlaylist *playlist;
     QList<MetaData *> liste;
     qint64 dureeTotale;
 

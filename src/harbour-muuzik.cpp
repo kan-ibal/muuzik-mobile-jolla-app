@@ -130,10 +130,18 @@ int main(int argc, char *argv[])
 //    qDebug() << "STAT : " << stat->getFileCount() << " " << stat->getFileSize();
 
 
+    QObject::connect(app.data(), &QGuiApplication::aboutToQuit, [&]() {
+        lecteurService::getInstance().arreter();
+        VolumeProxy::getInstance().cleanup();
+    });
+
     // set main pages and start
     view->setSource(SailfishApp::pathTo("qml/harbour-muuzik.qml"));
     //view->show();
     view->showFullScreen();
 
-    return app->exec();
+    int ret = app->exec();
+    lecteurService::getInstance().arreter();
+    VolumeProxy::getInstance().cleanup();
+    return ret;
 }

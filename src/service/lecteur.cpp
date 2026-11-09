@@ -25,7 +25,7 @@
  * @brief lecteurService::lecteurService
  * @param parent
  */
-lecteurService::lecteurService(QObject *parent) : QObject(parent),dureeTotale(0),sessionRestaure(false),sessionRestaurePlaylist(false),raf(false){
+lecteurService::lecteurService(QObject *parent) : QObject(parent),dureeTotale(0),sessionRestaure(false),sessionRestaurePlaylist(false),raf(false),media(0),playlist(0){
 
     // le "chargeur" de titre
     connect(this,
@@ -35,10 +35,12 @@ lecteurService::lecteurService(QObject *parent) : QObject(parent),dureeTotale(0)
             );
 
     // le lecteur
-    media.setPlaylist(&playlist);
-    connect(&media, SIGNAL(stateChanged(QMediaPlayer::State)), SLOT(changementEtat(QMediaPlayer::State)));
-    connect(&playlist, SIGNAL(currentIndexChanged(int)), SLOT(changementIndex(int)));
-    connect(&media, SIGNAL(positionChanged(qint64)), SLOT(changementPosition(qint64)));
+    media = new QMediaPlayer(this);
+    playlist = new QMediaPlaylist(this);
+    media->setPlaylist(playlist);
+    connect(media, SIGNAL(stateChanged(QMediaPlayer::State)), SLOT(changementEtat(QMediaPlayer::State)));
+    connect(playlist, SIGNAL(currentIndexChanged(int)), SLOT(changementIndex(int)));
+    connect(media, SIGNAL(positionChanged(qint64)), SLOT(changementPosition(qint64)));
 
     // dbus
     mpris = new Mpris(this);
@@ -75,9 +77,22 @@ lecteurService::lecteurService(QObject *parent) : QObject(parent),dureeTotale(0)
 }
 
 /**
- * @brief lecteurService::~lecteurService
+ * @brief lecteurService::arreter
  */
-lecteurService::~lecteurService() {
+void lecteurService::arreter() {
+    if(!media && !playlist) {
+        return;
+    }
+
+    if(media) {
+        media->stop();
+        media->disconnect();
+        media->setPlaylist(0);
+    }
+    if(playlist) {
+        playlist->clear();
+        playlist->disconnect();
+    }
 
     QDBusConnection session = QDBusConnection::sessionBus();
     session.unregisterService(MPRIS_SERVICE);
@@ -90,7 +105,19 @@ lecteurService::~lecteurService() {
                        "lineIdChanged",
                        this, SLOT(appelRecu(const QDBusMessage&)));
 
+    delete media;
+    media = 0;
+    delete playlist;
+    playlist = 0;
+
     liste.clear();
+}
+
+/**
+ * @brief lecteurService::~lecteurService
+ */
+lecteurService::~lecteurService() {
+    arreter();
 }
 
 /**
@@ -144,13 +171,13 @@ void lecteurService::remplacer(const QList<QString> &vurl, bool recursif) {
     emit enCoursChanged();
 
     // arrête le player et vide la liste
-    media.stop();
-    playlist.clear();
+    if (media) media->stop();
+    if (playlist) playlist->clear();
     //qDeleteAll(liste);
     liste.clear();
     dureeTotale=0;
 
-    bool autoplay = configService::getInstance().getAutoStart() && media.state() != QMediaPlayer::PlayingState ;
+    bool autoplay = configService::getInstance().getAutoStart() && (!media || media->state() != QMediaPlayer::PlayingState) ;
 
     // lancement du scan
     QFuture<void> f = QtConcurrent::run(doChargement,vurl,recursif,0,autoplay);
@@ -250,7 +277,9 @@ void lecteurService::finChargementImp(QList<MetaData *>*ll, const qint64 positio
         return;
     }
 
-    playlist.addMedia( MetaData::versMediaContent(ll) );
+    if(playlist) {
+        playlist->addMedia( MetaData::versMediaContent(ll) );
+    }
     liste.append(*ll);
 
     foreach (MetaData *t, liste) {
@@ -262,9 +291,9 @@ void lecteurService::finChargementImp(QList<MetaData *>*ll, const qint64 positio
 
 
     // debut de liste : ne peut venir que d'une restauration
-    if(position > -1) {
-        long p = position<playlist.mediaCount()-1 ? position : 0;
-        playlist.setCurrentIndex(p);
+    if(position > -1 && playlist) {
+        long p = position<playlist->mediaCount()-1 ? position : 0;
+        playlist->setCurrentIndex(p);
     }
 
     emit listeChanged();
@@ -319,9 +348,13 @@ void lecteurService::sauverSession() {
     }
 
     settings.setValue(LECTURE_LISTE, QVariant::fromValue(l));
-    settings.setValue(LECTURE_LISTE_INDEX, playlist.currentIndex() );
+    if (playlist) {
+        settings.setValue(LECTURE_LISTE_INDEX, playlist->currentIndex() );
+    }
     settings.sync();
     qDebug() << "saveSession stop";
+
+    arreter();
 }
 
 /**
@@ -334,7 +367,9 @@ void lecteurService::retirerUuid(qint64 uuid) {
         return;
     }
 
-    playlist.removeMedia(index);
+    if(playlist) {
+        playlist->removeMedia(index);
+    }
     liste.removeAt(index);
 
     emit listeChanged();
@@ -346,23 +381,23 @@ void lecteurService::retirerUuid(qint64 uuid) {
  */
 void lecteurService::monterUuid(const qint64 uuid) {
     qint64 position = trouverIndex(uuid);
-    if(position==-1) {
+    if(position==-1 || !playlist) {
         return;
     }
 
     liste.swap(position, position-1);
 
-    if(position==playlist.currentIndex()) {
-        QMediaContent m = playlist.media(position-1);
-        playlist.insertMedia(position+1, m);
-        playlist.removeMedia(position-1);
+    if(position==playlist->currentIndex()) {
+        QMediaContent m = playlist->media(position-1);
+        playlist->insertMedia(position+1, m);
+        playlist->removeMedia(position-1);
         emit listeChanged();
         return;
     }
 
-    QMediaContent m = playlist.media(position);
-    playlist.insertMedia(position-1, m);
-    playlist.removeMedia(position+1);
+    QMediaContent m = playlist->media(position);
+    playlist->insertMedia(position-1, m);
+    playlist->removeMedia(position+1);
     emit listeChanged();
 }
 
@@ -372,23 +407,23 @@ void lecteurService::monterUuid(const qint64 uuid) {
  */
 void lecteurService::descendreUuid(const qint64 uuid) {
     qint64 position = trouverIndex(uuid);
-    if(position==-1) {
+    if(position==-1 || !playlist) {
         return;
     }
 
     liste.swap(position, position+1);
 
-    if(position==playlist.currentIndex()) {
-        QMediaContent m = playlist.media(position+1);
-        playlist.insertMedia(position-1, m);
-        playlist.removeMedia(position+2);
+    if(position==playlist->currentIndex()) {
+        QMediaContent m = playlist->media(position+1);
+        playlist->insertMedia(position-1, m);
+        playlist->removeMedia(position+2);
         emit listeChanged();
         return;
     }
 
-    QMediaContent m = playlist.media(position);
-    playlist.insertMedia(position+2, m);
-    playlist.removeMedia(position);
+    QMediaContent m = playlist->media(position);
+    playlist->insertMedia(position+2, m);
+    playlist->removeMedia(position);
     emit listeChanged();
 }
 
@@ -397,10 +432,10 @@ void lecteurService::descendreUuid(const qint64 uuid) {
  * @return
  */
 MetaData *lecteurService::getTitre() const {
-    if( playlist.mediaCount()<=0) {
+    if(!playlist || playlist->mediaCount()<=0) {
         return NULL;
     }
-    int idx = playlist.currentIndex();
+    int idx = playlist->currentIndex();
     if( idx < 0 || idx >= liste.size()) {
         return NULL;
     }
@@ -413,11 +448,13 @@ MetaData *lecteurService::getTitre() const {
  * @return
  */
 void lecteurService::effacer() {
-    if(media.state() != QMediaPlayer::StoppedState) {
+    if(media && media->state() != QMediaPlayer::StoppedState) {
         stopper();
     }
 
-    playlist.clear();
+    if(playlist) {
+        playlist->clear();
+    }
     liste.clear();
     dureeTotale=0;
     nom=QString();
@@ -430,33 +467,35 @@ void lecteurService::effacer() {
  * @brief lire ou mettre en pause
  */
 void lecteurService::lire(qint64 index) {
-    if(playlist.mediaCount()<=0) {
+    if(!media || !playlist || playlist->mediaCount()<=0) {
         return;
     }
 
-    if( index >playlist.mediaCount()-1) {
+    if( index > playlist->mediaCount()-1) {
         return;
     }
 
     if( index >=0) {
-        playlist.setCurrentIndex(index);
-        media.play();
+        playlist->setCurrentIndex(index);
+        media->play();
         return;
     }
 
-    if( media.state() == QMediaPlayer::PlayingState) {
-        media.pause();
+    if( media->state() == QMediaPlayer::PlayingState) {
+        media->pause();
         return;
     }
 
-    media.play();
+    media->play();
 }
 
 /**
  * @brief stopper la lecture
  */
 void lecteurService::stopper() {
-    media.stop();
+    if (media) {
+        media->stop();
+    }
     //@fix utile ou deja fait par le signal positionChanged ???
     //dureetitre=0;
     // emit dureeChanged(dureetitre);
@@ -466,34 +505,34 @@ void lecteurService::stopper() {
 * @brief passe à la piste suivant si possible.
 */
 void lecteurService::suivant() {
-
-    if(playlist.nextIndex() == -1) {
+    if(!playlist || playlist->nextIndex() == -1) {
         return;
     }
-    playlist.next();
+    playlist->next();
 }
 
 /**
 * @brief passe à la piste precedente si possible.
 */
 void lecteurService::precedent() {
-    if(playlist.previousIndex() == -1 ) {
+    if(!playlist || playlist->previousIndex() == -1 ) {
         return;
     }
 
-    playlist.previous();
+    playlist->previous();
 }
 
 /**
  * @brief avance la position de la lecture dans le morceau en cours
  */
 void lecteurService::avancer(qint64 pos) {
+    if (!media) return;
     pos *=1000;
-    if( pos < 0 || pos > media.duration()) {
+    if( pos < 0 || pos > media->duration()) {
         return;
     }
 
-    media.setPosition(pos);
+    media->setPosition(pos);
 }
 
 /**
@@ -501,11 +540,12 @@ void lecteurService::avancer(qint64 pos) {
   * @param v
   */
 void lecteurService::switchAleatoire() {
-    playlist.setPlaybackMode( playlist.playbackMode() != QMediaPlaylist::Random
+    if(!playlist) return;
+    playlist->setPlaybackMode( playlist->playbackMode() != QMediaPlaylist::Random
             ? QMediaPlaylist::Random : QMediaPlaylist::Sequential);
 
     Notification n;
-    n.setPreviewBody(vI18n::getInstance().get( playlist.playbackMode() == QMediaPlaylist::Random  ? "lecteur.aleatoire.on" :"lecteur.aleatoire.off") );
+    n.setPreviewBody(vI18n::getInstance().get( playlist->playbackMode() == QMediaPlaylist::Random  ? "lecteur.aleatoire.on" :"lecteur.aleatoire.off") );
     n.setHintValue("x-nemo-icon", "image://theme/icon-s-attach");
     n.publish();
 
@@ -517,11 +557,12 @@ void lecteurService::switchAleatoire() {
   * @param v
   */
 void lecteurService::switchBoucle(){
-    playlist.setPlaybackMode( playlist.playbackMode() != QMediaPlaylist:: Loop
+    if(!playlist) return;
+    playlist->setPlaybackMode( playlist->playbackMode() != QMediaPlaylist:: Loop
             ? QMediaPlaylist::Loop : QMediaPlaylist::Sequential);
 
     Notification n;
-    n.setPreviewBody(vI18n::getInstance().get( playlist.playbackMode() == QMediaPlaylist::Loop  ? "lecteur.boucle.on" :"lecteur.boucle.off") );
+    n.setPreviewBody(vI18n::getInstance().get( playlist->playbackMode() == QMediaPlaylist::Loop  ? "lecteur.boucle.on" :"lecteur.boucle.off") );
     n.setHintValue("x-nemo-icon", "image://theme/icon-s-attach");
     n.publish();
 
@@ -550,8 +591,8 @@ void lecteurService::changementPosition(qint64 duration) {
  */
 void lecteurService::changementIndex(int position) {
     if(position==-1) {
-        media.stop();
-        playlist.setCurrentIndex(0);
+        if (media) media->stop();
+        if (playlist) playlist->setCurrentIndex(0);
         return;
     }
 
@@ -592,8 +633,8 @@ void lecteurService::appelRecu(const QDBusMessage &a) {
         return;
     }
 
-    if( media.state() == QMediaPlayer::PlayingState) {
-        media.pause();
+    if( media && media->state() == QMediaPlayer::PlayingState) {
+        media->pause();
     }
 }
 
@@ -663,8 +704,10 @@ void lecteurService::onMoved(QString vurl, QString as) {
             m->setChemin(target);
 
             // media
-            playlist.removeMedia(i);
-            playlist.insertMedia(i, MetaData::versMediaContent(m) );
+            if (playlist) {
+                playlist->removeMedia(i);
+                playlist->insertMedia(i, MetaData::versMediaContent(m) );
+            }
         }
     }
 }

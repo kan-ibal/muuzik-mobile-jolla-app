@@ -17,7 +17,8 @@ public:
         NONE = 0,
         WCDMA = 1,
         WIFI = 2,
-        ETH = 3
+        ETH = 3,
+        VPN = 4
     };
     Q_ENUM(Type)
 

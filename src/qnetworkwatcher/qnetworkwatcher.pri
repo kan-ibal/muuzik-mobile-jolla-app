@@ -1,3 +1,5 @@
+QT += network dbus
+
 HEADERS += $$PWD/qnetworkwatcher.h \
     $$PWD/networktype.h
 

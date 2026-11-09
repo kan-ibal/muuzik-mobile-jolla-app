@@ -75,6 +75,8 @@ public:
      */
     Q_INVOKABLE quint32 getHighVolumeStep() { return highVolumeStep;}
 
+    void cleanup();
+
 private :
     explicit VolumeProxy(QObject *parent = 0);
     ~VolumeProxy();
