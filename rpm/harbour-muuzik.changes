@@ -1,7 +1,10 @@
-* Sat Nov 07 2026 kan-ibal <kan-ibal@users.noreply.github.com> 2.5.4
-- memory leaks 
+* Sat Nov 15 2026 kan-ibal <kan-ibal@users.noreply.github.com> 2.5.4
+- memory leaks
 - small fixes
+- playlist crash fix
 - search for albums
+- mpris and bluetooth data fix
+- text lyrics fix
 
 * Sun May 17 2026 kan-ibal <kan-ibal@users.noreply.github.com> 2.5.2
 - fix for Lyrics in Text mode

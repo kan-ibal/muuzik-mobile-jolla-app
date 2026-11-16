@@ -12,6 +12,7 @@
 #include <QtConcurrent/QtConcurrentRun>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QMutexLocker>
 #include <utime.h>
 
 #include "config.h"
@@ -56,7 +57,7 @@ static QRegExp BLANK("[ -:#';,?&$%()=+\\[\\]!*]");
  * @param parent
  */
 ArtWorkService::ArtWorkService(QObject *parent) :
-    QObject(parent), manager(new QNetworkAccessManager(this)), lastfmwarning(false) {
+    QObject(parent), manager(new QNetworkAccessManager(this)), lastfmwarning(false), cacheMutex(QMutex::Recursive) {
     manager->setNetworkAccessible(QNetworkAccessManager::Accessible);
     connect(manager, SIGNAL(finished(QNetworkReply *)), this, SLOT(reponseNet(QNetworkReply*)));
 
@@ -101,6 +102,7 @@ void ArtWorkService::getArtAsync(const QString &vurl) {
   * @return url vers la miniature
   **/
 QString ArtWorkService::getArt(const QString &vurl) {
+    QMutexLocker locker(&cacheMutex);
     //    qDebug() << "sur ArtWorkService::getArt " << vurl;
 
     // cherche dans le cache

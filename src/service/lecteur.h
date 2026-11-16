@@ -313,6 +313,7 @@ public slots:
 private slots :
     void changementEtat(QMediaPlayer::State state);
     void changementPosition(qint64 position); // changenent position en miliseconde
+    void changementDureeMedia(qint64 duration);
     void changementIndex(int position); // changement de media
 
 

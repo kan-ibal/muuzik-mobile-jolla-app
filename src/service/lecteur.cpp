@@ -41,6 +41,7 @@ lecteurService::lecteurService(QObject *parent) : QObject(parent),dureeTotale(0)
     connect(media, SIGNAL(stateChanged(QMediaPlayer::State)), SLOT(changementEtat(QMediaPlayer::State)));
     connect(playlist, SIGNAL(currentIndexChanged(int)), SLOT(changementIndex(int)));
     connect(media, SIGNAL(positionChanged(qint64)), SLOT(changementPosition(qint64)));
+    connect(media, SIGNAL(durationChanged(qint64)), SLOT(changementDureeMedia(qint64)));
 
     // dbus
     mpris = new Mpris(this);
@@ -292,8 +293,10 @@ void lecteurService::finChargementImp(QList<MetaData *>*ll, const qint64 positio
 
     // debut de liste : ne peut venir que d'une restauration
     if(position > -1 && playlist) {
-        long p = position<playlist->mediaCount()-1 ? position : 0;
+        long p = position < playlist->mediaCount() ? position : 0;
         playlist->setCurrentIndex(p);
+    } else if(playlist && playlist->currentIndex() == -1 && playlist->mediaCount() > 0) {
+        playlist->setCurrentIndex(0);
     }
 
     emit listeChanged();
@@ -533,6 +536,9 @@ void lecteurService::avancer(qint64 pos) {
     }
 
     media->setPosition(pos);
+    if (mprislecteur) {
+        emit mprislecteur->Seeked(static_cast<qlonglong>(pos) * 1000LL);
+    }
 }
 
 /**
@@ -586,13 +592,27 @@ void lecteurService::changementPosition(qint64 duration) {
 }
 
 /**
+ * @brief lecteurService::changementDureeMedia
+ * @param duration
+ */
+void lecteurService::changementDureeMedia(qint64 duration) {
+    if (mprislecteur) {
+        mprislecteur->changementDuree(duration);
+    }
+}
+
+/**
  * @brief lecteurService::changementIndex
  * @param position
  */
 void lecteurService::changementIndex(int position) {
     if(position==-1) {
         if (media) media->stop();
-        if (playlist) playlist->setCurrentIndex(0);
+        if (playlist && playlist->mediaCount() > 0) {
+            playlist->setCurrentIndex(0);
+        } else {
+            emit titreChanged(NULL);
+        }
         return;
     }
 

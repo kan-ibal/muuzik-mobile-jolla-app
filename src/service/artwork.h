@@ -10,6 +10,7 @@
 #include <QNetworkReply>
 #include <QHash>
 #include <QFileInfo>
+#include <QMutex>
 #include <qqml.h>
 
 #define ARTSERVICE_QML_NAME "ARTService"
@@ -65,6 +66,7 @@ private :
     explicit ArtWorkService(QObject *parent = 0);
 
     // on cache les resultats
+    mutable QMutex cacheMutex;
     QHash<QString,QString> cache;
 
     bool lastfmwarning;

@@ -58,12 +58,16 @@ public:
     //   bool getCanSeek();
     bool getCanControl(){return true;}
 
+    void changementDuree(qint64 durationMs);
+
 private :
     QVariantMap metadata;
+    QString currentTrackChemin;
     lecteurService *service;
 
     quint64 taille; // cache taiile de la playlist
 
+    void buildMetadata(MetaData *t);
     void sendDBusProperty(const QVariantMap value);
 
 signals:
@@ -90,6 +94,7 @@ protected slots:
     void changementPlaylist();
     void changementEtat(bool s);
     void changementMode();
+    void changementPochette(const QString &vurl, const QString &artPath);
 
 private slots:
 
