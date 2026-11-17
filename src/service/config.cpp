@@ -6,6 +6,8 @@
 #include <QtQml>
 #include <QMetaType>
 #include <QQmlEngine>
+#include <QStandardPaths>
+#include <QCoreApplication>
 
 #include "../vi18n/vi18n.h"
 #include "../sdcardlocator/sdcardlocator.h"
@@ -16,7 +18,13 @@
  * @brief configService::configService
  * @param parent
  */
-configService::configService(QObject *parent) : QObject(parent),sdcard(QString::null),modeRO(false) {
+configService::configService(QObject *parent)
+    : QObject(parent)
+    , settings(QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation)
+               + "/" + QCoreApplication::applicationName() + ".conf",
+               QSettings::NativeFormat)
+    , sdcard(QString::null)
+    , modeRO(false) {
 
     configversion=settings.value(NIVEAUCONFIG,0).toInt();;
 

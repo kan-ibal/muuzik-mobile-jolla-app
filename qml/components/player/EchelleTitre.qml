@@ -28,7 +28,8 @@ Item {
         anchors.horizontalCenter: parent.horizontalCenter
         width: parent.width - avenir.width - ecoule.width
         minimumValue: 0
-        maximumValue: tempsTotal
+        maximumValue: Math.max(1, tempsTotal)
+        enabled: tempsTotal > 0
         value: 0
         onReleased: {lecteurService.avancer(duree.value);}
     }

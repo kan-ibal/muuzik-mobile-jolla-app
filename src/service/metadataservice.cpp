@@ -130,7 +130,7 @@ MetaData *MetaDataService::doGetMetaData(const QString & vurl) {
     TagLib::FileRef fr(path.toUtf8().constData() );
     if( fr.isNull()==false) {
         if(fr.audioProperties() != NULL) {
-            m->setDuree(fr.audioProperties()->length());
+            m->setDuree(fr.audioProperties()->lengthInSeconds());
         }
         if(fr.tag() != NULL ) {
             m->setTitre(QString(fr.tag()->title().toCString(true)));

@@ -57,7 +57,7 @@ static QRegExp BLANK("[ -:#';,?&$%()=+\\[\\]!*]");
  * @param parent
  */
 ArtWorkService::ArtWorkService(QObject *parent) :
-    QObject(parent), manager(new QNetworkAccessManager(this)), lastfmwarning(false), cacheMutex(QMutex::Recursive) {
+    QObject(parent), manager(new QNetworkAccessManager(this)), cacheMutex(QMutex::Recursive), lastfmwarning(false) {
     manager->setNetworkAccessible(QNetworkAccessManager::Accessible);
     connect(manager, SIGNAL(finished(QNetworkReply *)), this, SLOT(reponseNet(QNetworkReply*)));
 

@@ -6,6 +6,8 @@
 #include <QtConcurrent/QtConcurrentRun>
 #include <qdebug.h>
 #include <QStack>
+#include <QStandardPaths>
+#include <QCoreApplication>
 
 #include "config.h"
 #include "../app.h"
@@ -25,7 +27,17 @@
  * @brief lecteurService::lecteurService
  * @param parent
  */
-lecteurService::lecteurService(QObject *parent) : QObject(parent),dureeTotale(0),sessionRestaure(false),sessionRestaurePlaylist(false),raf(false),media(0),playlist(0){
+lecteurService::lecteurService(QObject *parent)
+    : QObject(parent)
+    , media(0)
+    , playlist(0)
+    , dureeTotale(0)
+    , sessionRestaure(false)
+    , sessionRestaurePlaylist(false)
+    , raf(false)
+    , settings(QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation)
+               + "/" + QCoreApplication::applicationName() + ".conf",
+               QSettings::NativeFormat) {
 
     // le "chargeur" de titre
     connect(this,

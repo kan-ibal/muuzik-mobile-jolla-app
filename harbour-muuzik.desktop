@@ -5,6 +5,7 @@ Exec=harbour-muuzik
 Name=Muuzik!
 
 [X-Sailjail]
+OrganizationName=pl.kanibal
+ApplicationName=harbour-muuzik
+Permissions=UserDirs;Audio;Bluetooth;Internet;RemovableMedia;MediaIndexing
 Sandboxing=Disabled
-OrganizationName=com.kan-ibal
-ApplicationName=Muuzik!

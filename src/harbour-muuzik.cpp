@@ -87,8 +87,9 @@ int main(int argc, char *argv[])
 
     QScopedPointer<QGuiApplication> app(SailfishApp::application(argc, argv));
     //QtWebView::initialize();
-    app->setOrganizationName(QStringLiteral("com.kan-bal"));
-    app->setApplicationName(QStringLiteral("Muuzik!"));
+    app->setOrganizationName(QStringLiteral("pl.kanibal"));
+    app->setApplicationName(QStringLiteral("harbour-muuzik"));
+    app->setApplicationDisplayName(QStringLiteral("Muuzik!"));
     app->setApplicationVersion(QString(APP_VERSION));
 
     QScopedPointer<QQuickView> view(SailfishApp::createView());

@@ -2,6 +2,8 @@
 #include <qdebug.h>
 #include <QtAlgorithms>
 #include <QStack>
+#include <QStandardPaths>
+#include <QCoreApplication>
 
 #include "../app.h"
 #include "../bean/MetaData.h"
@@ -14,7 +16,11 @@
 
 #include <nemonotifications-qt5/notification.h>
 
-favorisService::favorisService(QObject *parent) : QObject(parent){
+favorisService::favorisService(QObject *parent)
+    : QObject(parent)
+    , settings(QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation)
+               + "/" + QCoreApplication::applicationName() + ".conf",
+               QSettings::NativeFormat) {
     config = &configService::getInstance();
     connect(config,SIGNAL(ordreFavorisChanged()), this, SLOT(ordreFavorisImpl()));
 
@@ -183,7 +189,10 @@ void favorisService::recharger() {
  * @brief importer l'ancienne liste de favoris dans la nouvelle base
  */
 void favorisService::importer() {
-    QSettings settings;
+    const QString settingsPath =
+        QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation)
+        + "/" + QCoreApplication::applicationName() + ".conf";
+    QSettings settings(settingsPath, QSettings::NativeFormat);
     QList<QString> l = settings.value("favoris/liste").value<QList<QString> >();
     if(l.length()==0) {
     }

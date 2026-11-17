@@ -107,10 +107,10 @@ void HistoriqueService::ajouter(const QString &vurl) {
   */
 void HistoriqueService::supprimer(quint64 uuid) {
 
-    for(quint64 i=0; i < liste.length() ; i++) {
+    for(int i = 0; i < liste.length(); i++) {
         RowHistorique *f = liste.at(i);
 
-        if ( f->getUuid() == uuid ) {
+        if ( f->getUuid() >= 0 && static_cast<quint64>(f->getUuid()) == uuid ) {
             dao.supprimer(f->getChemin());
 
             // NOTA : il ne faut pas recharger la liste car les uuid seront

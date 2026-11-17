@@ -2,7 +2,7 @@ import QtQuick 2.2
 import Sailfish.Silica 1.0
 import "../components"
 
-import org.vostok.virtualfiles 1.0
+import pl.kanibal.virtualfiles 1.0
 
 Dialog {
     id: page

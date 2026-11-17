@@ -8,6 +8,7 @@
 #include <QFuture>
 #include <QtConcurrent/QtConcurrentRun>
 #include <QCoreApplication>
+#include <QStandardPaths>
 #include <QtAlgorithms>
 
 #include "../app.h"
@@ -112,7 +113,10 @@ void IndexeurService::finRechargementImpl() {
     dbok=true;
 
     // date de dernière mise à jour
-    QSettings settings;
+    const QString settingsPath =
+        QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation)
+        + "/" + QCoreApplication::applicationName() + ".conf";
+    QSettings settings(settingsPath, QSettings::NativeFormat);
     settings.setValue(INDEXEUR_DATE, QDateTime::currentMSecsSinceEpoch());
     settings.sync();
 
@@ -244,7 +248,10 @@ void IndexeurService::finVerifierMiseAJourImpl(quint64 timestamp) {
         return;
     }
 
-    QSettings settings;
+    const QString settingsPath =
+        QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation)
+        + "/" + QCoreApplication::applicationName() + ".conf";
+    QSettings settings(settingsPath, QSettings::NativeFormat);
     quint64 d=settings.value(INDEXEUR_DATE,INDEXEUR_DATE_DEF).toLongLong();
 
     qDebug() << "Date mise à jour precedente : " << d << " - " << timestamp;

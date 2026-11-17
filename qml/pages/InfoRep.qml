@@ -5,7 +5,7 @@ import "../hints"
 import "../js/app.js" as App
 import "../js/affichage.js" as Affichage
 
-import org.vostok.virtualfiles 1.0
+import pl.kanibal.virtualfiles 1.0
 import org.vostok.metadata 1.0
 
 Page {

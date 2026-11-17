@@ -3,7 +3,7 @@ import Sailfish.Silica 1.0
 import "../components"
 import "../hints"
 import "../js/app.js" as App
-import org.vostok.virtualfiles 1.0
+import pl.kanibal.virtualfiles 1.0
 import org.vostok.metadata 1.0
 
 Page {

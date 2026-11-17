@@ -63,13 +63,13 @@ VFService& VFService::getInstance() {
  */
 void VFService::init(QQmlContext *context, QString name) {
     context->setContextProperty(name,&VFService::getInstance());
-    qmlRegisterType<VFInfo>("org.vostok.virtualfiles", 1, 0, "VFInfo");
+    qmlRegisterType<VFInfo>("pl.kanibal.virtualfiles", 1, 0, "VFInfo");
     qRegisterMetaType<QList<VFInfo*> >( "QList<VFInfo*>" );
     qRegisterMetaType<QList<VFInfo*> *>( "QList<VFInfo*>*" );
 
-    qmlRegisterType<VFStat>("org.vostok.virtualfiles", 1, 0, "VFStat");
+    qmlRegisterType<VFStat>("pl.kanibal.virtualfiles", 1, 0, "VFStat");
 
-    qmlRegisterUncreatableType<VFService>("org.vostok.virtualfiles", 1, 0, "VFEnum","");
+    qmlRegisterUncreatableType<VFService>("pl.kanibal.virtualfiles", 1, 0, "VFEnum","");
 }
 
 /*************************************************************/
@@ -1055,8 +1055,9 @@ bool VFService::date(const QString &vurl,const quint64 timestamp) {
         }
 
         QString target(str+vurl);
+        const time_t sec = static_cast<time_t>(timestamp / 1000);
         utimbuf t {
-            timestamp / 1000, timestamp / 1000
+            sec, sec
         };
         int res = utime(target.toLocal8Bit(), &t);
 

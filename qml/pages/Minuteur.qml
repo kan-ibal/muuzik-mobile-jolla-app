@@ -18,7 +18,8 @@ Dialog {
         Slider {
             label: vi18n.get("nuit.temps.limite")
             minimumValue: 0
-            maximumValue: lecteurService.dureeTotale
+            maximumValue: Math.max(60, lecteurService.dureeTotale)
+            enabled: lecteurService.dureeTotale > 0
             stepSize: 60
             width: parent.width
             value: modeNuitService.tempsFinal
@@ -51,7 +52,8 @@ Dialog {
             visible: modeNuitService.reductionVolume
             label: vi18n.get("nuit.volume.minimal")
             minimumValue: 0
-            maximumValue: VolumeService.stepCount
+            maximumValue: Math.max(1, VolumeService.stepCount)
+            enabled: VolumeService.stepCount > 0
             stepSize: 1
             width: parent.width
             value: modeNuitService.volumeFinal

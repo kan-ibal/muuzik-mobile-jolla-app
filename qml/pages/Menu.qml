@@ -76,7 +76,7 @@ Page {
             icone:"image://theme/icon-m-question"
             t:"topmenu.aleatoire"
             d:"topmenu.aleatoire.desc"
-            c:"Aleatoire.qml"
+            c:"Random.qml"
         }
         ListElement {
             icone:"image://muuzik/img/son"
