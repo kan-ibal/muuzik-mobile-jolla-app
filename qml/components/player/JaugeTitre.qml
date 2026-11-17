@@ -12,7 +12,7 @@ Item {
     property int _taille: lecteurService.taille     // size of the list
     property int _tempsTotalListe: lecteurService.dureeTotale // total runs
     property int _tempsbaseListe: 0                      // as mentioned in the previous section
-    property int _ecouteTitre: 0                    // already listened to the track
+    property int _ecouteTitre: lecteurService.getPosition()                    // already listened to the track
 
     width: parent.width
     height: fond.height + compteur.height
@@ -131,7 +131,15 @@ Item {
             ARTService.getArtAsync(morceau.chemin);
         }
 
+        _ecouteTitre = lecteurService.getPosition();
         mettreAJourInfoListe();
+    }
+
+    onVisibleChanged: {
+        if (visible) {
+            _ecouteTitre = lecteurService.getPosition();
+            mettreAJourInfoListe();
+        }
     }
 
     Connections {
@@ -147,7 +155,7 @@ Item {
 
         onTitreChanged: {
             //   _tempsTitre = t.duree;
-            _ecouteTitre = 0;
+            _ecouteTitre = lecteurService.getPosition();
 
             // on reinitialise la pochette au cas on la prochaine ne soit pas trouvé
 //            fond.source = "image://muuzik/img/son?" + Theme.primaryColor

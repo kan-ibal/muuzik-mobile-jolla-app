@@ -132,7 +132,7 @@ int main(int argc, char *argv[])
 
 
     QObject::connect(app.data(), &QGuiApplication::aboutToQuit, [&]() {
-        lecteurService::getInstance().arreter();
+        lecteurService::getInstance().sauverSession();
         VolumeProxy::getInstance().cleanup();
     });
 

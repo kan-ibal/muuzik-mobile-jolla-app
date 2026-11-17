@@ -9,6 +9,7 @@
 #include <QList>
 #include <QtDBus>
 #include <QDebug>
+#include <QElapsedTimer>
 
 #include "../bean/MetaData.h"
 #include "mpris/mpris.h"
@@ -19,6 +20,9 @@
 
 #define LECTURE_LISTE "lecteur2/liste"
 #define LECTURE_LISTE_INDEX "lecteur2/index"
+#define LECTURE_POSITION "lecteur2/position"
+#define LECTURE_MODE "lecteur2/mode"
+#define LECTURE_NOM "lecteur2/nom"
 
 #define LECTEURSERVICE_QML_NAME "lecteurService"
 
@@ -193,7 +197,8 @@ public:
       * @brief retourne la position en seconde du titre en cours
       * @return
       */
-    Q_INVOKABLE int getPosition() const { return media ? media->position()/1000 : 0; }
+    Q_INVOKABLE int getPosition() const;
+    qint64 getPositionMs() const;
 
     /**
      * @brief getAleatoire
@@ -255,10 +260,15 @@ private:
     bool sessionRestaurePlaylist;
 
     bool raf;
+    qint64 pendingRestorePositionMs;
+    QElapsedTimer lastSaveTimer;
 
     QSettings settings;
 
     bool showControl;
+
+    void persistSession();
+    void applyPendingRestorePosition();
 
     /**
      * @brief parcours la liste et retourne l'index du titre qui a l'uuid ; -1 si trouve pas
@@ -315,6 +325,8 @@ private slots :
     void changementPosition(qint64 position); // changenent position en miliseconde
     void changementDureeMedia(qint64 duration);
     void changementIndex(int position); // changement de media
+    void changementMediaStatus(QMediaPlayer::MediaStatus status);
+    void changementSeekable(bool seekable);
 
 
     void appelRecu(const QDBusMessage &a);

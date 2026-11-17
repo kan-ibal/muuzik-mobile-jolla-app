@@ -5,7 +5,7 @@ import "../../js/app.js" as App
 Item {
     id: echelle
 
-    property int tempsEcoule:0
+    property int tempsEcoule: lecteurService.getPosition()
     property int tempsTotal: lecteurService.titre ? lecteurService.titre.duree : 0
 
     width: parent.width
@@ -30,7 +30,7 @@ Item {
         minimumValue: 0
         maximumValue: Math.max(1, tempsTotal)
         enabled: tempsTotal > 0
-        value: 0
+        value: tempsEcoule
         onReleased: {lecteurService.avancer(duree.value);}
     }
 
@@ -59,8 +59,21 @@ Item {
         }
 
         onTitreChanged: {
-            tempsEcoule = 0;
+            tempsEcoule = lecteurService.getPosition();
+            duree.value = tempsEcoule;
             tempsTotal = t ? t.duree : 0;
+        }
+    }
+
+    Component.onCompleted: {
+        tempsEcoule = lecteurService.getPosition();
+        duree.value = tempsEcoule;
+    }
+
+    onVisibleChanged: {
+        if (visible) {
+            tempsEcoule = lecteurService.getPosition();
+            duree.value = tempsEcoule;
         }
     }
 

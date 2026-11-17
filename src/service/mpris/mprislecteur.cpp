@@ -83,8 +83,15 @@ void MprisLecteur::Seek(qlonglong offset) {
         return;
     }
 
-    qint64 currentMs = service->media->position();
+    qint64 currentMs = service->getPositionMs();
     qint64 durationMs = service->media->duration();
+    if (durationMs <= 0) {
+        MetaData *t = service->getTitre();
+        if (t && t->getDuree() > 0) {
+            durationMs = static_cast<qint64>(t->getDuree()) * 1000LL;
+        }
+    }
+
     qint64 targetMs = currentMs + (offset / 1000LL);
     if (targetMs < 0) {
         targetMs = 0;
@@ -93,8 +100,18 @@ void MprisLecteur::Seek(qlonglong offset) {
         targetMs = durationMs;
     }
 
+    if (service->media->state() == QMediaPlayer::StoppedState && service->media->duration() <= 0) {
+        service->pendingRestorePositionMs = targetMs;
+        emit service->dureeChanged(targetMs / 1000);
+        emit Seeked(static_cast<qlonglong>(targetMs) * 1000LL);
+        service->persistSession();
+        return;
+    }
+
+    service->pendingRestorePositionMs = -1;
     service->media->setPosition(targetMs);
     emit Seeked(static_cast<qlonglong>(targetMs) * 1000LL);
+    service->persistSession();
 }
 
 /**
@@ -119,12 +136,25 @@ void MprisLecteur::SetPosition(const QDBusObjectPath &TrackId, qlonglong Positio
 
     qint64 targetMs = Position / 1000LL;
     qint64 durationMs = service->media->duration();
+    if (durationMs <= 0 && t->getDuree() > 0) {
+        durationMs = static_cast<qint64>(t->getDuree()) * 1000LL;
+    }
     if (targetMs < 0 || (durationMs > 0 && targetMs > durationMs)) {
         return;
     }
 
+    if (service->media->state() == QMediaPlayer::StoppedState && service->media->duration() <= 0) {
+        service->pendingRestorePositionMs = targetMs;
+        emit service->dureeChanged(targetMs / 1000);
+        emit Seeked(static_cast<qlonglong>(targetMs) * 1000LL);
+        service->persistSession();
+        return;
+    }
+
+    service->pendingRestorePositionMs = -1;
     service->media->setPosition(targetMs);
     emit Seeked(static_cast<qlonglong>(targetMs) * 1000LL);
+    service->persistSession();
 }
 
 void  MprisLecteur::OpenUri(QString uri){
@@ -198,10 +228,10 @@ void MprisLecteur::setShuffle(bool v) {
  * @return position in microseconds
  */
 qlonglong MprisLecteur::getPosition() {
-    if (!service || !service->media) {
+    if (!service) {
         return 0;
     }
-    return static_cast<qlonglong>(service->media->position()) * 1000LL;
+    return static_cast<qlonglong>(service->getPositionMs()) * 1000LL;
 }
 
 /**

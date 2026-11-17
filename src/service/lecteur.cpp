@@ -20,7 +20,6 @@
 
 #include <nemonotifications-qt5/notification.h>
 
-#define MAX_TAILLE_SAUVEGARDE 50
 #define MAX_TAILLE_PLAYLIST 150
 
 /**
@@ -35,6 +34,7 @@ lecteurService::lecteurService(QObject *parent)
     , sessionRestaure(false)
     , sessionRestaurePlaylist(false)
     , raf(false)
+    , pendingRestorePositionMs(-1)
     , settings(QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation)
                + "/" + QCoreApplication::applicationName() + ".conf",
                QSettings::NativeFormat) {
@@ -54,6 +54,8 @@ lecteurService::lecteurService(QObject *parent)
     connect(playlist, SIGNAL(currentIndexChanged(int)), SLOT(changementIndex(int)));
     connect(media, SIGNAL(positionChanged(qint64)), SLOT(changementPosition(qint64)));
     connect(media, SIGNAL(durationChanged(qint64)), SLOT(changementDureeMedia(qint64)));
+    connect(media, SIGNAL(mediaStatusChanged(QMediaPlayer::MediaStatus)), SLOT(changementMediaStatus(QMediaPlayer::MediaStatus)));
+    connect(media, SIGNAL(seekableChanged(bool)), SLOT(changementSeekable(bool)));
 
     // dbus
     mpris = new Mpris(this);
@@ -181,6 +183,7 @@ void lecteurService::remplacer(const QList<QString> &vurl, bool recursif) {
     }
 
     raf=true;
+    pendingRestorePositionMs = -1;
     emit enCoursChanged();
 
     // arrête le player et vide la liste
@@ -255,15 +258,21 @@ void lecteurService::doChargement(const QList<QString> &vurls, bool recursif, qi
 
         try {
             QString str = vurls.at(position);
-            quint64 index = 0;
+            if (position < ll->length() && ll->at(position)->getChemin().compare(str) == 0) {
+                // Exact index preserved
+            } else {
+                qint64 index = 0;
+                bool found = false;
 
-            foreach(MetaData *m, *ll) {
-                if(m->getChemin().compare(str)==0) {
-                    break;
+                foreach(MetaData *m, *ll) {
+                    if(m->getChemin().compare(str)==0) {
+                        found = true;
+                        break;
+                    }
+                    index++;
                 }
-                index++;
+                position = found ? index : -1;
             }
-            position = index;
 
         } catch(const std::exception & e) {
             qDebug()<< "on the exception";
@@ -282,10 +291,14 @@ void lecteurService::doChargement(const QList<QString> &vurls, bool recursif, qi
  */
 void lecteurService::finChargementImp(QList<MetaData *>*ll, const qint64 position,bool autoplay) {
 
+    bool restoring = sessionRestaurePlaylist;
+
     raf=false;
     emit  enCoursChanged();
 
     if(ll->length()==0) {
+        sessionRestaurePlaylist=false;
+        pendingRestorePositionMs = -1;
         delete ll;
         return;
     }
@@ -299,19 +312,39 @@ void lecteurService::finChargementImp(QList<MetaData *>*ll, const qint64 positio
         dureeTotale+=t->getDuree();
     }
 
-    // an s'assure de ne plus être dans le cas d'une restauration (pas de play, pas d'historique)
-    sessionRestaurePlaylist=false;
-
-
     // debut de liste : ne peut venir que d'une restauration
     if(position > -1 && playlist) {
-        long p = position < playlist->mediaCount() ? position : 0;
+        int p = position < playlist->mediaCount() ? static_cast<int>(position) : 0;
         playlist->setCurrentIndex(p);
-    } else if(playlist && playlist->currentIndex() == -1 && playlist->mediaCount() > 0) {
-        playlist->setCurrentIndex(0);
+    } else {
+        if (restoring) {
+            pendingRestorePositionMs = -1;
+        }
+        if(playlist && playlist->currentIndex() == -1 && playlist->mediaCount() > 0) {
+            playlist->setCurrentIndex(0);
+        }
+    }
+
+    // on s'assure de ne plus être dans le cas d'une restauration (pas de play, pas d'historique)
+    sessionRestaurePlaylist=false;
+
+    if (restoring && pendingRestorePositionMs > 0) {
+        MetaData *t = getTitre();
+        if (t && t->getDuree() > 0 && pendingRestorePositionMs > static_cast<qint64>(t->getDuree()) * 1000LL) {
+            pendingRestorePositionMs = static_cast<qint64>(t->getDuree()) * 1000LL;
+        }
+    } else if (!restoring) {
+        pendingRestorePositionMs = -1;
     }
 
     emit listeChanged();
+
+    if (restoring && pendingRestorePositionMs > 0) {
+        emit dureeChanged(pendingRestorePositionMs / 1000);
+        applyPendingRestorePosition();
+    } else if (!restoring) {
+        persistSession();
+    }
 
     if(autoplay) {
         lire();
@@ -336,14 +369,55 @@ void lecteurService::restaurerSession() {
     }
 
 
-    quint64 pos = settings.value(LECTURE_LISTE_INDEX,0).toInt();
+    int pos = settings.value(LECTURE_LISTE_INDEX, 0).toInt();
+    if (pos < 0) {
+        pos = 0;
+    }
+
+    qint64 savedPosMs = settings.value(LECTURE_POSITION, 0).toLongLong();
+    pendingRestorePositionMs = savedPosMs > 0 ? savedPosMs : -1;
+
+    nom = settings.value(LECTURE_NOM).toString();
+    int savedMode = settings.value(LECTURE_MODE, static_cast<int>(QMediaPlaylist::Sequential)).toInt();
+    if (playlist && (savedMode == QMediaPlaylist::Sequential ||
+                     savedMode == QMediaPlaylist::Random ||
+                     savedMode == QMediaPlaylist::Loop)) {
+        playlist->setPlaybackMode(static_cast<QMediaPlaylist::PlaybackMode>(savedMode));
+        emit modeChanged();
+    }
 
     raf=true;
     emit enCoursChanged();
 
     // lancement du scan
     sessionRestaurePlaylist=true;   // on recharger depuis la session, pas de lecture automatique
-    QFuture<void> f = QtConcurrent::run(doChargement,vurl,false, pos,false);
+    QFuture<void> f = QtConcurrent::run(doChargement, vurl, false, pos, false);
+}
+
+/**
+ * @brief Persiste l'état de la file de lecture et la position du titre courant
+ */
+void lecteurService::persistSession() {
+    if (!sessionRestaure || !media || !playlist || raf) {
+        return;
+    }
+
+    QList<QString> l;
+    int count = 0;
+    foreach (MetaData *t, liste) {
+        l.append(t->getChemin());
+        if (++count >= MAX_TAILLE_PLAYLIST) {
+            break;
+        }
+    }
+
+    settings.setValue(LECTURE_LISTE, QVariant::fromValue(l));
+    int idx = playlist->currentIndex();
+    settings.setValue(LECTURE_LISTE_INDEX, idx >= 0 ? idx : 0);
+    settings.setValue(LECTURE_POSITION, l.isEmpty() ? 0LL : getPositionMs());
+    settings.setValue(LECTURE_MODE, static_cast<int>(playlist->playbackMode()));
+    settings.setValue(LECTURE_NOM, nom);
+    settings.sync();
 }
 
 /**
@@ -351,25 +425,46 @@ void lecteurService::restaurerSession() {
  */
 void lecteurService::sauverSession() {
     qDebug() << "saveSession start";
-
-    QList<QString> l;
-
-    quint64 taille = 0;
-    foreach (MetaData *t, liste) {
-        l.append(t->getChemin());
-        if(++taille > MAX_TAILLE_SAUVEGARDE) {
-            break;
-        }
-    }
-
-    settings.setValue(LECTURE_LISTE, QVariant::fromValue(l));
-    if (playlist) {
-        settings.setValue(LECTURE_LISTE_INDEX, playlist->currentIndex() );
-    }
-    settings.sync();
+    persistSession();
     qDebug() << "saveSession stop";
 
     arreter();
+}
+
+/**
+ * @brief Applique la position restaurée dès que le média est prêt et seekable
+ */
+void lecteurService::applyPendingRestorePosition() {
+    if (pendingRestorePositionMs <= 0 || !media) {
+        return;
+    }
+    if (media->state() == QMediaPlayer::StoppedState || !media->isSeekable()) {
+        return;
+    }
+
+    qint64 dur = media->duration();
+    if (dur <= 0) {
+        return;
+    }
+
+    qint64 target = qMin(pendingRestorePositionMs, dur);
+    pendingRestorePositionMs = -1;
+    media->setPosition(target);
+    emit dureeChanged(target / 1000);
+    if (mprislecteur) {
+        emit mprislecteur->Seeked(static_cast<qlonglong>(target) * 1000LL);
+    }
+}
+
+qint64 lecteurService::getPositionMs() const {
+    if (pendingRestorePositionMs > 0) {
+        return pendingRestorePositionMs;
+    }
+    return media ? media->position() : 0;
+}
+
+int lecteurService::getPosition() const {
+    return static_cast<int>(getPositionMs() / 1000);
 }
 
 /**
@@ -387,6 +482,7 @@ void lecteurService::retirerUuid(qint64 uuid) {
     }
     liste.removeAt(index);
 
+    persistSession();
     emit listeChanged();
 }
 
@@ -406,6 +502,7 @@ void lecteurService::monterUuid(const qint64 uuid) {
         QMediaContent m = playlist->media(position-1);
         playlist->insertMedia(position+1, m);
         playlist->removeMedia(position-1);
+        persistSession();
         emit listeChanged();
         return;
     }
@@ -413,6 +510,7 @@ void lecteurService::monterUuid(const qint64 uuid) {
     QMediaContent m = playlist->media(position);
     playlist->insertMedia(position-1, m);
     playlist->removeMedia(position+1);
+    persistSession();
     emit listeChanged();
 }
 
@@ -432,6 +530,7 @@ void lecteurService::descendreUuid(const qint64 uuid) {
         QMediaContent m = playlist->media(position+1);
         playlist->insertMedia(position-1, m);
         playlist->removeMedia(position+2);
+        persistSession();
         emit listeChanged();
         return;
     }
@@ -439,6 +538,7 @@ void lecteurService::descendreUuid(const qint64 uuid) {
     QMediaContent m = playlist->media(position);
     playlist->insertMedia(position+2, m);
     playlist->removeMedia(position);
+    persistSession();
     emit listeChanged();
 }
 
@@ -473,7 +573,9 @@ void lecteurService::effacer() {
     liste.clear();
     dureeTotale=0;
     nom=QString();
+    pendingRestorePositionMs = -1;
 
+    persistSession();
     emit listeChanged();
     emit titreChanged(NULL);
 }
@@ -491,6 +593,7 @@ void lecteurService::lire(qint64 index) {
     }
 
     if( index >=0) {
+        pendingRestorePositionMs = -1;
         playlist->setCurrentIndex(index);
         media->play();
         return;
@@ -523,6 +626,7 @@ void lecteurService::suivant() {
     if(!playlist || playlist->nextIndex() == -1) {
         return;
     }
+    pendingRestorePositionMs = -1;
     playlist->next();
 }
 
@@ -534,6 +638,7 @@ void lecteurService::precedent() {
         return;
     }
 
+    pendingRestorePositionMs = -1;
     playlist->previous();
 }
 
@@ -542,15 +647,36 @@ void lecteurService::precedent() {
  */
 void lecteurService::avancer(qint64 pos) {
     if (!media) return;
-    pos *=1000;
-    if( pos < 0 || pos > media->duration()) {
+    qint64 posMs = pos * 1000LL;
+    if (posMs < 0) {
         return;
     }
 
-    media->setPosition(pos);
-    if (mprislecteur) {
-        emit mprislecteur->Seeked(static_cast<qlonglong>(pos) * 1000LL);
+    if (media->state() == QMediaPlayer::StoppedState && media->duration() <= 0) {
+        MetaData *t = getTitre();
+        qint64 maxMs = t ? static_cast<qint64>(t->getDuree()) * 1000LL : 0;
+        if (maxMs > 0 && posMs > maxMs) {
+            posMs = maxMs;
+        }
+        pendingRestorePositionMs = posMs;
+        emit dureeChanged(posMs / 1000);
+        if (mprislecteur) {
+            emit mprislecteur->Seeked(static_cast<qlonglong>(posMs) * 1000LL);
+        }
+        persistSession();
+        return;
     }
+
+    if (posMs > media->duration()) {
+        return;
+    }
+
+    pendingRestorePositionMs = -1;
+    media->setPosition(posMs);
+    if (mprislecteur) {
+        emit mprislecteur->Seeked(static_cast<qlonglong>(posMs) * 1000LL);
+    }
+    persistSession();
 }
 
 /**
@@ -567,6 +693,7 @@ void lecteurService::switchAleatoire() {
     n.setHintValue("x-nemo-icon", "image://theme/icon-s-attach");
     n.publish();
 
+    persistSession();
     emit modeChanged();
 }
 
@@ -584,6 +711,7 @@ void lecteurService::switchBoucle(){
     n.setHintValue("x-nemo-icon", "image://theme/icon-s-attach");
     n.publish();
 
+    persistSession();
     emit modeChanged();
 }
 
@@ -593,14 +721,25 @@ void lecteurService::switchBoucle(){
  */
 void lecteurService::changementEtat(QMediaPlayer::State state) {
     emit etatChanged(state == QMediaPlayer::PlayingState);
+    applyPendingRestorePosition();
+    if (state == QMediaPlayer::PausedState || state == QMediaPlayer::StoppedState) {
+        persistSession();
+    }
 }
 
 /**
  * @brief lecteurService::changementPosition
  * @param position
  */
-void lecteurService::changementPosition(qint64 duration) {
-    emit dureeChanged(duration/1000);
+void lecteurService::changementPosition(qint64 positionMs) {
+    if (pendingRestorePositionMs > 0) {
+        return;
+    }
+    emit dureeChanged(positionMs / 1000);
+    if (!lastSaveTimer.isValid() || lastSaveTimer.elapsed() >= 5000) {
+        persistSession();
+        lastSaveTimer.restart();
+    }
 }
 
 /**
@@ -611,6 +750,21 @@ void lecteurService::changementDureeMedia(qint64 duration) {
     if (mprislecteur) {
         mprislecteur->changementDuree(duration);
     }
+    applyPendingRestorePosition();
+}
+
+void lecteurService::changementMediaStatus(QMediaPlayer::MediaStatus status) {
+    if (status == QMediaPlayer::InvalidMedia || status == QMediaPlayer::EndOfMedia) {
+        pendingRestorePositionMs = -1;
+        return;
+    }
+    applyPendingRestorePosition();
+}
+
+void lecteurService::changementSeekable(bool seekable) {
+    if (seekable) {
+        applyPendingRestorePosition();
+    }
 }
 
 /**
@@ -619,6 +773,7 @@ void lecteurService::changementDureeMedia(qint64 duration) {
  */
 void lecteurService::changementIndex(int position) {
     if(position==-1) {
+        pendingRestorePositionMs = -1;
         if (media) media->stop();
         if (playlist && playlist->mediaCount() > 0) {
             playlist->setCurrentIndex(0);
@@ -628,8 +783,16 @@ void lecteurService::changementIndex(int position) {
         return;
     }
 
+    if (!sessionRestaurePlaylist) {
+        pendingRestorePositionMs = -1;
+    }
+
     emit indexChanged(position);
     emit titreChanged(getTitre());
+
+    if (!sessionRestaurePlaylist) {
+        persistSession();
+    }
 }
 
 /**
@@ -742,6 +905,7 @@ void lecteurService::onMoved(QString vurl, QString as) {
             }
         }
     }
+    persistSession();
 }
 
 /**
