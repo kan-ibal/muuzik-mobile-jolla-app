@@ -1,3 +1,6 @@
+* Tue Nov 17 2026 kan-ibal <kan-ibal@users.noreply.github.com> 2.6.0
+- add feature to remember queue and song position
+
 * Mon Nov 16 2026 kan-ibal <kan-ibal@users.noreply.github.com> 2.5.4
 - memory leaks
 - small fixes
