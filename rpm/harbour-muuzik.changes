@@ -7,6 +7,7 @@
 - text lyrics fix
 - sandboxing preparing
 - crash fixes
+- search field ENTER fix
 
 * Sun May 17 2026 kan-ibal <kan-ibal@users.noreply.github.com> 2.5.2
 - fix for Lyrics in Text mode

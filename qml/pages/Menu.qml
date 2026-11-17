@@ -69,7 +69,7 @@ Page {
             icone:"image://theme/icon-m-search"
             t:"topmenu.recherche"
             d:"topmenu.recherche.desc"
-            c:"Rechercher.qml"
+            c:"Search.qml"
         }
 
         ListElement {
