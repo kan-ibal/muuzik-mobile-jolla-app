@@ -15,7 +15,12 @@ MprisPlayer::MprisPlayer(playerService *s)
     , lastCanPause(false)
     , lastCanSeek(false)
     , lastCanGoNext(false)
-    , lastCanGoPrevious(false) {
+    , lastCanGoPrevious(false)
+    , syncTimer(new QTimer(this)) {
+    syncTimer->setSingleShot(true);
+    syncTimer->setInterval(200);
+    connect(syncTimer, SIGNAL(timeout()), this, SLOT(syncProperties()));
+
     connect(s,SIGNAL(titleChanged(MetaData*)),this, SLOT(changementTitre(MetaData*)));
     connect(s,SIGNAL(listChanged()),this, SLOT(changementPlaylist()));
     connect(s,SIGNAL(modeChanged()),this, SLOT(changementMode()));
@@ -30,6 +35,10 @@ MprisPlayer::MprisPlayer(playerService *s)
 void  MprisPlayer::Next(){
     qDebug() << "!!! MprisPlayer::Next";
 
+    if (!service) {
+        return;
+    }
+
     service->next();
 }
 
@@ -38,6 +47,10 @@ void  MprisPlayer::Next(){
  */
 void MprisPlayer:: Previous(){
     qDebug() << "!!! MprisPlayer::Previous";
+
+    if (!service) {
+        return;
+    }
 
     service->previous();
 }
@@ -48,11 +61,11 @@ void MprisPlayer:: Previous(){
 void  MprisPlayer::Pause(){
     qDebug() << "!!! MprisPlayer::Pause";
 
-    if( service->getStatus()==false) {
+    if(!service) {
         return;
     }
 
-    service->play();
+    service->pause();
 }
 
 /**
@@ -60,6 +73,10 @@ void  MprisPlayer::Pause(){
  */
 void  MprisPlayer::PlayPause(){
     qDebug() << "!!! MprisPlayer::PlayPause";
+
+    if(!service) {
+        return;
+    }
 
     service->play();
 }
@@ -70,6 +87,10 @@ void  MprisPlayer::PlayPause(){
 void  MprisPlayer::Stop(){
     qDebug() << "!!! MprisPlayer::Stop";
 
+    if(!service) {
+        return;
+    }
+
     service->stop();
 }
 
@@ -78,7 +99,7 @@ void  MprisPlayer::Stop(){
  */
 void  MprisPlayer::Play(){
     qDebug() << "!!! MprisPlayer::Play";
-    if( service->getStatus() == true) {
+    if(!service || service->getStatus() == true) {
         return;
     }
 
@@ -196,7 +217,7 @@ QString MprisPlayer::getPlaybackStatus() {
  * @return
  */
 QString MprisPlayer::getLoopStatus() {
-    if(service->getLoop()) {
+    if(service && service->getLoop()) {
         return "Playlist";
     }
     return "None";
@@ -207,6 +228,10 @@ QString MprisPlayer::getLoopStatus() {
  * @param v
  */
 void  MprisPlayer::setLoopStatus(QString v) {
+    if (!service) {
+        return;
+    }
+
     if( v.compare("None",Qt::CaseInsensitive)==0) {
         if(service->getLoop()==true) {
             service->switchLoop();
@@ -226,11 +251,11 @@ void  MprisPlayer::setLoopStatus(QString v) {
  * @return
  */
 bool MprisPlayer::getShuffle() {
-    return service->getRandom();
+    return service && service->getRandom();
 }
 
 void MprisPlayer::setShuffle(bool v) {
-    if(service->getRandom() == v) {
+    if(!service || service->getRandom() == v) {
         return;
     }
 
@@ -359,42 +384,69 @@ void MprisPlayer::buildMetadata(MetaData *t) {
     }
 }
 
-void MprisPlayer::appendCapabilityChanges(QVariantMap &p) {
+void MprisPlayer::appendCapabilityChanges(QVariantMap &p, bool forceAll) {
     QString status = getPlaybackStatus();
-    if (status != lastPlaybackStatus) {
+    if (forceAll || status != lastPlaybackStatus) {
         lastPlaybackStatus = status;
         p.insert("PlaybackStatus", status);
     }
 
+    if (forceAll) {
+        p.insert("CanControl", getCanControl());
+    }
+
     bool canPlay = getCanPlay();
-    if (canPlay != lastCanPlay) {
+    if (forceAll || canPlay != lastCanPlay) {
         lastCanPlay = canPlay;
         p.insert("CanPlay", canPlay);
     }
 
     bool canPause = getCanPause();
-    if (canPause != lastCanPause) {
+    if (forceAll || canPause != lastCanPause) {
         lastCanPause = canPause;
         p.insert("CanPause", canPause);
     }
 
     bool canSeek = getCanSeek();
-    if (canSeek != lastCanSeek) {
+    if (forceAll || canSeek != lastCanSeek) {
         lastCanSeek = canSeek;
         p.insert("CanSeek", canSeek);
     }
 
     bool canGoNext = getCanGoNext();
-    if (canGoNext != lastCanGoNext) {
+    if (forceAll || canGoNext != lastCanGoNext) {
         lastCanGoNext = canGoNext;
         p.insert("CanGoNext", canGoNext);
     }
 
     bool canGoPrevious = getCanGoPrevious();
-    if (canGoPrevious != lastCanGoPrevious) {
+    if (forceAll || canGoPrevious != lastCanGoPrevious) {
         lastCanGoPrevious = canGoPrevious;
         p.insert("CanGoPrevious", canGoPrevious);
     }
+}
+
+void MprisPlayer::scheduleSync() {
+    if (syncTimer) {
+        syncTimer->start();
+    }
+}
+
+void MprisPlayer::syncProperties() {
+    QVariantMap p;
+    if (service) {
+        MetaData *t = service->getTitle();
+        if (t != NULL && metadata.isEmpty()) {
+            buildMetadata(t);
+        }
+    }
+    if (!metadata.isEmpty()) {
+        p.insert("Metadata", metadata);
+    }
+    appendCapabilityChanges(p, true);
+    p.insert("Shuffle", getShuffle());
+    p.insert("LoopStatus", getLoopStatus());
+    sendDBusProperty(p);
 }
 
 /**
@@ -406,9 +458,10 @@ void MprisPlayer::changementTitre(MetaData *t) {
 
     QVariantMap p;
     p.insert("Metadata", metadata);
-    appendCapabilityChanges(p);
+    appendCapabilityChanges(p, true);
 
     sendDBusProperty(p);
+    scheduleSync();
 }
 
 /**
@@ -425,6 +478,7 @@ void MprisPlayer::changementDuree(qint64 durationMs) {
         metadata.insert("mpris:length", QVariant::fromValue(newLengthUs));
         QVariantMap p;
         p.insert("Metadata", metadata);
+        appendCapabilityChanges(p, true);
         sendDBusProperty(p);
     }
 }
@@ -447,6 +501,7 @@ void MprisPlayer::changementPochette(const QString &vurl, const QString &artPath
             metadata.insert("mpris:artUrl", fileUrl);
             QVariantMap p;
             p.insert("Metadata", metadata);
+            appendCapabilityChanges(p, true);
             sendDBusProperty(p);
         }
     }
@@ -457,8 +512,9 @@ void MprisPlayer::changementPochette(const QString &vurl, const QString &artPath
  */
 void MprisPlayer::changementPlaylist() {
     QVariantMap p;
-    appendCapabilityChanges(p);
+    appendCapabilityChanges(p, true);
     sendDBusProperty(p);
+    scheduleSync();
 }
 
 /**
@@ -469,17 +525,13 @@ void MprisPlayer::changementEtat(bool s) {
     Q_UNUSED(s);
     QVariantMap p;
 
-    MetaData *t = service->getTitle();
+    MetaData *t = service ? service->getTitle() : NULL;
     if (t != NULL && metadata.isEmpty()) {
         buildMetadata(t);
         p.insert("Metadata", metadata);
     }
 
-    appendCapabilityChanges(p);
-    if (!p.contains("PlaybackStatus")) {
-        lastPlaybackStatus = getPlaybackStatus();
-        p.insert("PlaybackStatus", lastPlaybackStatus);
-    }
+    appendCapabilityChanges(p, true);
 
     sendDBusProperty(p);
 }
@@ -491,7 +543,7 @@ void MprisPlayer::changementMode() {
     QVariantMap p;
     p.insert("Shuffle", getShuffle());
     p.insert("LoopStatus", getLoopStatus());
-    appendCapabilityChanges(p);
+    appendCapabilityChanges(p, true);
     sendDBusProperty(p);
 }
 

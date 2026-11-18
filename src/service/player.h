@@ -151,6 +151,11 @@ public:
     Q_INVOKABLE void play(qint64 index = -1);
 
     /**
+     * @brief mettre en pause la lecture si en cours
+     */
+    Q_INVOKABLE void pause();
+
+    /**
      * @brief stopper la lecture
      */
     Q_INVOKABLE void stop();
@@ -174,7 +179,7 @@ public:
      * @return vrai si passe à la piste precedente
      */
     Q_INVOKABLE void previous();
-    Q_INVOKABLE bool aPrecedent() {return playlist ? (playlist->previousIndex() != -1) : false;}
+    Q_INVOKABLE bool aPrecedent() {return playlist ? (playlist->mediaCount() > 0 && (playlist->previousIndex() != -1 || !playHistory.isEmpty() || playlist->playbackMode() == QMediaPlaylist::Random || playlist->currentIndex() >= 0)) : false;}
 
     /**
      * @brief avance la position de la lecture dnas le morceau en cours
@@ -263,6 +268,9 @@ private:
     bool raf;
     qint64 pendingRestorePositionMs;
     QElapsedTimer lastSaveTimer;
+    QList<int> playHistory;
+    int lastCurrentIndex;
+    bool navigatingHistory;
 
     QSettings settings;
 

@@ -38,6 +38,8 @@ playerService::playerService(QObject *parent)
     , sessionRestaurePlaylist(false)
     , raf(false)
     , pendingRestorePositionMs(-1)
+    , lastCurrentIndex(-1)
+    , navigatingHistory(false)
     , settings(QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation)
                + "/" + QCoreApplication::applicationName() + ".conf",
                QSettings::NativeFormat) {
@@ -141,6 +143,9 @@ void playerService::arreter() {
     playlist = 0;
 
     liste.clear();
+    playHistory.clear();
+    lastCurrentIndex = -1;
+    navigatingHistory = false;
 }
 
 /**
@@ -205,6 +210,9 @@ void playerService::replace(const QList<QString> &vurl, bool recursif) {
     if (media) media->stop();
     if (playlist) playlist->clear();
     liste.clear();
+    playHistory.clear();
+    lastCurrentIndex = -1;
+    navigatingHistory = false;
     dureeTotale=0;
     emit listChanged();
     emit titleChanged(NULL);
@@ -531,6 +539,9 @@ void playerService::retirerUuid(qint64 uuid) {
         return;
     }
 
+    int currentIdx = playlist ? playlist->currentIndex() : -1;
+    bool removedCurrent = (index == currentIdx);
+
     MetaData *removed = liste.takeAt(index);
     if (removed) {
         dureeTotale = qMax<qint64>(0, dureeTotale - removed->getDuree());
@@ -540,8 +551,14 @@ void playerService::retirerUuid(qint64 uuid) {
         playlist->removeMedia(index);
     }
 
+    playHistory.clear();
+    lastCurrentIndex = playlist ? playlist->currentIndex() : -1;
+
     persistSession();
     emit listChanged();
+    if (removedCurrent) {
+        emit titleChanged(getTitle());
+    }
 }
 
 /**
@@ -633,6 +650,9 @@ void playerService::effacer() {
         playlist->clear();
     }
     liste.clear();
+    playHistory.clear();
+    lastCurrentIndex = -1;
+    navigatingHistory = false;
     dureeTotale=0;
     nom=QString();
     pendingRestorePositionMs = -1;
@@ -667,7 +687,21 @@ void playerService::play(qint64 index) {
         return;
     }
 
+    if (playlist->currentIndex() < 0) {
+        playlist->setCurrentIndex(0);
+    }
+
     media->play();
+}
+
+/**
+ * @brief mettre en pause la lecture si en cours
+ */
+void playerService::pause() {
+    if (!media || media->state() != QMediaPlayer::PlayingState) {
+        return;
+    }
+    media->pause();
 }
 
 /**
@@ -691,18 +725,60 @@ void playerService::next() {
     }
     pendingRestorePositionMs = -1;
     playlist->next();
+    if (media) {
+        media->play();
+    }
 }
 
 /**
 * @brief passe à la piste precedente si possible.
 */
 void playerService::previous() {
-    if(!playlist || playlist->previousIndex() == -1 ) {
+    if(!playlist || playlist->mediaCount() <= 0) {
         return;
     }
 
     pendingRestorePositionMs = -1;
-    playlist->previous();
+
+    if (playlist->playbackMode() == QMediaPlaylist::Random) {
+        int prevIdx = -1;
+        while (!playHistory.isEmpty()) {
+            int candidate = playHistory.takeLast();
+            if (candidate >= 0 && candidate < playlist->mediaCount() && candidate != playlist->currentIndex()) {
+                prevIdx = candidate;
+                break;
+            }
+        }
+        if (prevIdx == -1 && playlist->mediaCount() > 1) {
+            int cur = playlist->currentIndex();
+            prevIdx = (cur > 0) ? (cur - 1) : (playlist->mediaCount() - 1);
+        }
+        if (prevIdx >= 0) {
+            navigatingHistory = true;
+            playlist->setCurrentIndex(prevIdx);
+            navigatingHistory = false;
+        } else if (media) {
+            media->setPosition(0);
+            emit dureeChanged(0);
+            if (mprisplayer) {
+                emit mprisplayer->Seeked(0);
+            }
+        }
+    } else if (playlist->previousIndex() != -1) {
+        navigatingHistory = true;
+        playlist->previous();
+        navigatingHistory = false;
+    } else if (media) {
+        media->setPosition(0);
+        emit dureeChanged(0);
+        if (mprisplayer) {
+            emit mprisplayer->Seeked(0);
+        }
+    }
+
+    if (media) {
+        media->play();
+    }
 }
 
 /**
@@ -837,6 +913,7 @@ void playerService::changementSeekable(bool seekable) {
 void playerService::changementIndex(int position) {
     if(position==-1) {
         pendingRestorePositionMs = -1;
+        lastCurrentIndex = -1;
         if (media) media->stop();
         if (playlist && playlist->mediaCount() > 0) {
             playlist->setCurrentIndex(0);
@@ -845,6 +922,16 @@ void playerService::changementIndex(int position) {
         }
         return;
     }
+
+    if (!navigatingHistory && !sessionRestaurePlaylist &&
+            lastCurrentIndex >= 0 && lastCurrentIndex != position &&
+            playlist && lastCurrentIndex < playlist->mediaCount()) {
+        playHistory.append(lastCurrentIndex);
+        if (playHistory.size() > 100) {
+            playHistory.removeFirst();
+        }
+    }
+    lastCurrentIndex = position;
 
     if (!sessionRestaurePlaylist) {
         pendingRestorePositionMs = -1;

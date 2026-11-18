@@ -2,6 +2,7 @@
 #define MPRISPLAYER_H
 
 #include <QObject>
+#include <QTimer>
 #include <QtDBus>
 #include <QDBusAbstractAdaptor>
 #include "mpris.h"
@@ -37,7 +38,7 @@ public:
     //org.mpris.MediaPlayer2.Player
     QString getPlaybackStatus();
     QString getLoopStatus();
-    void  setLoopStatus(QString v);
+    void setLoopStatus(QString v);
     double getRate() {return 1.0;}
     void setRate(double r){ Q_UNUSED(r); }
     bool getShuffle();
@@ -45,7 +46,7 @@ public:
     QVariantMap getMetadata();
     double getVolume();
     void setVolume(double v);
-    qlonglong  getPosition();
+    qlonglong getPosition();
     double getMinimumRate() {return 1.0;}
     double getMaximumRate() {return 1.0;}
 
@@ -69,10 +70,12 @@ private :
     bool lastCanSeek;
     bool lastCanGoNext;
     bool lastCanGoPrevious;
+    QTimer *syncTimer;
 
     void buildMetadata(MetaData *t);
-    void appendCapabilityChanges(QVariantMap &p);
+    void appendCapabilityChanges(QVariantMap &p, bool forceAll = false);
     void sendDBusProperty(const QVariantMap &value);
+    void scheduleSync();
 
 signals:
     //org.mpris.MediaPlayer2.Player
@@ -81,15 +84,14 @@ signals:
 public slots :
 
     //org.mpris.MediaPlayer2.Player
-    Q_INVOKABLE void  Next();
-    Q_INVOKABLE void  Previous();
-    Q_INVOKABLE void  Pause();
-    Q_INVOKABLE  void  PlayPause();
-    Q_INVOKABLE void  Stop();
-    Q_INVOKABLE  void  Play();
-    Q_INVOKABLE  void Seek(qlonglong offset);
-    Q_INVOKABLE  void SetPosition(const QDBusObjectPath &TrackId, qlonglong Position);
-
+    Q_INVOKABLE void Next();
+    Q_INVOKABLE void Previous();
+    Q_INVOKABLE void Pause();
+    Q_INVOKABLE void PlayPause();
+    Q_INVOKABLE void Stop();
+    Q_INVOKABLE void Play();
+    Q_INVOKABLE void Seek(qlonglong offset);
+    Q_INVOKABLE void SetPosition(const QDBusObjectPath &TrackId, qlonglong Position);
 
     void  OpenUri(QString uri);
 
@@ -99,6 +101,7 @@ protected slots:
     void changementEtat(bool s);
     void changementMode();
     void changementPochette(const QString &vurl, const QString &artPath);
+    void syncProperties();
 
 private slots:
 
