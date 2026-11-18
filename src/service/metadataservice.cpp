@@ -7,6 +7,7 @@
 #include <QtConcurrent/QtConcurrentRun>
 #include <QtAlgorithms>
 #include <QMutexLocker>
+#include <QThread>
 
 #include  <taglib/fileref.h>
 #include  <taglib/tag.h>
@@ -105,12 +106,20 @@ MetaData *MetaDataService::getMetaData(const QString & vurl, bool soft) {
 
         m1->setChemin(vurl);
 qDebug() << "meta de " << vurl << " " << m1->getArtiste();
+        if (QThread::currentThread() != thread()) {
+            m1->moveToThread(thread());
+        }
+        QQmlEngine::setObjectOwnership(m1, QQmlEngine::CppOwnership);
         cache.insert(vurl, m1);
         return m1;
     }
 
     // simple media ou pas de "soft"
     MetaData *m = MetaDataService::doGetMetaData(vurl);
+    if (QThread::currentThread() != thread()) {
+        m->moveToThread(thread());
+    }
+    QQmlEngine::setObjectOwnership(m, QQmlEngine::CppOwnership);
     cache.insert(vurl, m);
 
     return m;
@@ -167,7 +176,11 @@ QVariant MetaDataService::getMetaDataAsQVariant(const QString & vurl, bool soft)
         return QVariant();
     }
 
-    return QVariant::fromValue( MetaData::copy(m) );
+    MetaData *copy = MetaData::copy(m);
+    if (copy && QThread::currentThread() != thread()) {
+        copy->moveToThread(thread());
+    }
+    return QVariant::fromValue(copy);
 }
 
 /**
@@ -230,6 +243,10 @@ AlbumStat *MetaDataService::getStatFromAlbum(const QString &vurl) {
     }
     //    delete l;
 
+    if (QThread::currentThread() != thread()) {
+        stat->moveToThread(thread());
+    }
+    QQmlEngine::setObjectOwnership(stat, QQmlEngine::CppOwnership);
     statCache.insert(vurl,stat);
 
     return stat;

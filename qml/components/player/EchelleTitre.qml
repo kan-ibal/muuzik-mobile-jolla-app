@@ -5,8 +5,8 @@ import "../../js/app.js" as App
 Item {
     id: echelle
 
-    property int tempsEcoule: lecteurService.getPosition()
-    property int tempsTotal: lecteurService.titre ? lecteurService.titre.duree : 0
+    property int tempsEcoule: playerService.getPosition()
+    property int tempsTotal: playerService.title ? playerService.title.duree : 0
 
     width: parent.width
     height: Math.max(ecoule.height,duree.height)
@@ -31,7 +31,7 @@ Item {
         maximumValue: Math.max(1, tempsTotal)
         enabled: tempsTotal > 0
         value: tempsEcoule
-        onReleased: {lecteurService.avancer(duree.value);}
+        onReleased: {playerService.avancer(duree.value);}
     }
 
     Label {
@@ -47,7 +47,7 @@ Item {
     }
 
     Connections {
-        target:lecteurService
+        target:playerService
 
         onDureeChanged:{
            if(enabled === false || visible === false || duree.pressed ) {
@@ -58,21 +58,21 @@ Item {
             duree.value=value;
         }
 
-        onTitreChanged: {
-            tempsEcoule = lecteurService.getPosition();
+        onTitleChanged: {
+            tempsEcoule = playerService.getPosition();
             duree.value = tempsEcoule;
             tempsTotal = t ? t.duree : 0;
         }
     }
 
     Component.onCompleted: {
-        tempsEcoule = lecteurService.getPosition();
+        tempsEcoule = playerService.getPosition();
         duree.value = tempsEcoule;
     }
 
     onVisibleChanged: {
         if (visible) {
-            tempsEcoule = lecteurService.getPosition();
+            tempsEcoule = playerService.getPosition();
             duree.value = tempsEcoule;
         }
     }

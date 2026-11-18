@@ -5,7 +5,7 @@ import "../js/app.js" as App
 
 CoverBackground {
     property bool active: status === Cover.Active
-    property var morceau: lecteurService.titre
+    property var morceau: playerService.title
 
     function infoLecture(value) {
         ecoule.text = App.getDuree(value);
@@ -16,13 +16,13 @@ CoverBackground {
     }
 
     CoverPlaceholder {
-        visible: morceau === null
+        visible: !morceau
         icon.source: "qrc:///img/logo"
         text: vi18n.get("app.titre")
     }
 
     Item {
-        visible: morceau !==null
+        visible: !!morceau
         anchors.fill: parent
 
         Image {
@@ -66,7 +66,7 @@ CoverBackground {
         }
 
         Label {
-            text: morceau !== null ? morceau.titre : ""
+            text: morceau ? morceau.titre : ""
             color: Theme.highlightColor
             font.pixelSize: Theme.fontSizeExtraSmall
             anchors {
@@ -81,19 +81,19 @@ CoverBackground {
         CoverAction {
             id : icoplay
             iconSource: "image://theme/icon-cover-pause?"+ Theme.primaryColor
-            onTriggered: lecteurService.lire();
+            onTriggered: playerService.play();
         }
 
         CoverAction {
             iconSource: "image://theme/icon-cover-next-song?"+ Theme.primaryColor
-            onTriggered: lecteurService.suivant();
+            onTriggered: playerService.next();
         }
     }
 
     onActiveChanged: {
         if(active) {
-            infoLecture(lecteurService.getPosition());
-            infoBoutonLecture(lecteurService.getEtat());
+            infoLecture(playerService.getPosition());
+            infoBoutonLecture(playerService.getStatus());
             if(morceau) {
                 ARTService.getArtAsync(morceau.chemin);
             }
@@ -101,8 +101,8 @@ CoverBackground {
     }
 
     Connections {
-        target:lecteurService
-        onEtatChanged:{
+        target:playerService
+        onStatusChanged:{
             infoBoutonLecture(s);
         }
 
@@ -110,7 +110,7 @@ CoverBackground {
             infoLecture(value);
         }
 
-        onTitreChanged: {
+        onTitleChanged: {
             fond.source = "image://muuzik/img/son?"+ Theme.primaryColor
             if (t) {
                 ARTService.getArtAsync(t.chemin);

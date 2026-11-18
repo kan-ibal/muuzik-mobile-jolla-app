@@ -27,10 +27,8 @@ class MprisLecteur : public QDBusAbstractAdaptor {
     Q_PROPERTY(bool CanGoNext READ getCanGoNext  )
     Q_PROPERTY(bool CanGoPrevious READ getCanGoPrevious  )
     Q_PROPERTY(bool CanPlay READ getCanPlay  )
-    Q_PROPERTY(bool CanPause READ getCanPlay  )
-    Q_PROPERTY(bool CanSeek READ getCanPlay  )
-    //   Q_PROPERTY(bool CanPause READ getCanPause  )
-    //    Q_PROPERTY(bool CanSeek READ getCanSeek  )
+    Q_PROPERTY(bool CanPause READ getCanPause  )
+    Q_PROPERTY(bool CanSeek READ getCanSeek  )
     Q_PROPERTY(bool CanControl READ getCanControl  )
 
 public:
@@ -41,7 +39,7 @@ public:
     QString getLoopStatus();
     void  setLoopStatus(QString v);
     double getRate() {return 1.0;}
-    void setRate(double r){}
+    void setRate(double r){ Q_UNUSED(r); }
     bool getShuffle();
     void setShuffle(bool v);
     QVariantMap getMetadata();
@@ -54,8 +52,8 @@ public:
     bool getCanGoNext();
     bool getCanGoPrevious();
     bool getCanPlay();
-    //   bool getCanPause();
-    //   bool getCanSeek();
+    bool getCanPause();
+    bool getCanSeek();
     bool getCanControl(){return true;}
 
     void changementDuree(qint64 durationMs);
@@ -65,10 +63,16 @@ private :
     QString currentTrackChemin;
     lecteurService *service;
 
-    quint64 taille; // cache taiile de la playlist
+    QString lastPlaybackStatus;
+    bool lastCanPlay;
+    bool lastCanPause;
+    bool lastCanSeek;
+    bool lastCanGoNext;
+    bool lastCanGoPrevious;
 
     void buildMetadata(MetaData *t);
-    void sendDBusProperty(const QVariantMap value);
+    void appendCapabilityChanges(QVariantMap &p);
+    void sendDBusProperty(const QVariantMap &value);
 
 signals:
     //org.mpris.MediaPlayer2.Player

@@ -33,7 +33,7 @@ Page {
     //-----------------------------------------
     function ecouter(v,r) {
         r = typeof r !== 'undefined' ? r : true;
-        lecteurService.remplacer([v],r);
+        playerService.replace([v],r);
         pageStack.push(Qt.resolvedUrl("ListeLecture.qml"));
     }
 
@@ -512,10 +512,10 @@ Page {
                 }
             }
             MenuItem {
-                visible: modeNuitService.actif===true
+                visible: nightModeService.active===true
                 text:  vi18n.get("menu.nuit.off")
                 onClicked: {
-                    modeNuitService.arreter();
+                    nightModeService.stop();
                 }
             }
             MenuItem {

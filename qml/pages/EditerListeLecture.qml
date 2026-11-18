@@ -17,8 +17,8 @@ Page {
         height: parent.height
         width: parent.width
         clip: true
-        enabled:  lecteurService.taille !== 0
-        model: lecteurService.liste;
+        enabled:  playerService.size !== 0
+        model: playerService.list;
 
         VerticalScrollDecorator { flickable: fileList }
 
@@ -88,7 +88,7 @@ Page {
                     rightMargin: Theme.paddingLarge
                 }
                 enabled: index !==0
-                onClicked: lecteurService.monterUuid(uuid)
+                onClicked: playerService.monterUuid(uuid)
             }
 
             IconButton {
@@ -101,8 +101,8 @@ Page {
                     right: parent.right
                     rightMargin: Theme.paddingLarge
                 }
-                enabled: index !== lecteurService.taille -1
-                onClicked: lecteurService.descendreUuid(uuid)
+                enabled: index !== playerService.size -1
+                onClicked: playerService.descendreUuid(uuid)
             }
 
             RemorseItem { id: remorse }
@@ -112,14 +112,14 @@ Page {
             function showRemorseItem() {
                 var idx = uuid;
                 remorse.execute(fileItem, "Deleting", function() {
-                    lecteurService.retirerUuid(idx);
+                    playerService.retirerUuid(idx);
                 } );
             }
 
         }
 
         ViewPlaceholder {
-            enabled:  lecteurService === 0
+            enabled:  playerService.size === 0
             text:  vi18n.get("enlecture.vide")
             hintText:  vi18n.get("enlecture.vide.sum")
         }

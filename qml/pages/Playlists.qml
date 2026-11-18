@@ -11,14 +11,14 @@ Page {
     //----------------------------------
     function ouvrir(uuid) {
         var pls = PlaylistService.getPls(uuid);
-        lecteurService.remplacer(pls.liste);
+        playerService.replace(pls.liste);
         pageStack.push(Qt.resolvedUrl("ListeLecture.qml"));
     }
 
     //----------------------------------
     function ajouter(uuid) {
         var pls = PlaylistService.getPls(uuid);
-        lecteurService.ajouter(pls.liste);
+        playerService.add(pls.liste);
     }
 
     //----------------------------------

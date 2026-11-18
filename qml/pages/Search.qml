@@ -21,7 +21,7 @@ Page {
     //-----------------------------------------
     function playUri(uri, shuffle) {
         shuffle = typeof shuffle !== "undefined" ? shuffle : true
-        lecteurService.remplacer([uri], shuffle)
+        playerService.replace([uri], shuffle)
         pageStack.push(Qt.resolvedUrl("ListeLecture.qml"))
     }
 
@@ -32,7 +32,7 @@ Page {
 
     //-----------------------------------------
     function appendAndPlay(uri) {
-        lecteurService.ajouter([uri], false)
+        playerService.add([uri], false)
         pageStack.push(Qt.resolvedUrl("ListeLecture.qml"))
     }
 

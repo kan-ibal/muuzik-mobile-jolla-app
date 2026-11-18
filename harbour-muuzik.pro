@@ -41,7 +41,7 @@ SOURCES += \
     src/service/config.cpp \
     src/service/playlist.cpp \
     src/bean/pls.cpp \
-    src/service/lecteur.cpp \
+    src/service/player.cpp \
     src/service/favoris.cpp \
     src/service/recherche.cpp \
     src/service/infos.cpp \
@@ -49,8 +49,8 @@ SOURCES += \
     src/service/lastfm.cpp \
     src/bean/resultitem.cpp \
     src/service/mpris/mpris.cpp \
-    src/service/mpris/mprislecteur.cpp \
-    src/service/modenuit.cpp \
+    src/service/mpris/mprisplayer.cpp \
+    src/service/nightmode.cpp \
     src/service/historique.cpp \
     src/util/db.cpp \
     src/util/rowhistorique.cpp \
@@ -78,7 +78,7 @@ HEADERS += \
     src/service/config.h \
     src/service/playlist.h \
     src/bean/pls.h \
-    src/service/lecteur.h \
+    src/service/player.h \
     src/service/favoris.h \
     src/service/recherche.h \
     src/service/infos.h \
@@ -86,8 +86,8 @@ HEADERS += \
     src/service/lastfm.h \
     src/bean/resultitem.h \
     src/service/mpris/mpris.h \
-    src/service/mpris/mprislecteur.h \
-    src/service/modenuit.h \
+    src/service/mpris/mprisplayer.h \
+    src/service/nightmode.h \
     src/service/historique.h \
     src/util/db.h \
     src/util/rowhistorique.h \

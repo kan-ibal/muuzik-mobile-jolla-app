@@ -13,14 +13,18 @@ Page {
 
 
     function setTitre(t) {
-        if(t=== undefined) {
+        if (!t) {
+            artiste = "";
+            album = "";
+            titre = "";
+            chemin = "";
             return;
         }
 
-        artiste=t.artiste;
-        album=t.album;
-        titre=t.titre;
-        chemin=t.chemin;
+        artiste = t.artiste;
+        album = t.album;
+        titre = t.titre;
+        chemin = t.chemin;
     }
 
     SilicaFlickable {
@@ -77,16 +81,15 @@ Page {
     }
 
     onStatusChanged: {
-
-        if (status===PageStatus.Active&&direct===false) {
-            setTitre(lecteurService.getTitre());
+        if (status === PageStatus.Active && direct === false) {
+            setTitre(playerService.title);
         }
     }
 
     Connections {
-        target:lecteurService
+        target:playerService
 
-        onTitreChanged: {
+        onTitleChanged: {
             if (status!==PageStatus.Active || direct===true) {
                 return;
             }

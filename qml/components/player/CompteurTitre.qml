@@ -6,8 +6,8 @@ import "../../js/app.js" as App
 Label {
     id: compteur
 
-    property int _index: lecteurService.index   // index du titre en cours
-    property int _taille: lecteurService.taille     // taille de la liste
+    property int _index: playerService.index   // index du titre en cours
+    property int _taille: playerService.size     // taille de la liste
 
     text: _taille > 0 ? (_index+1) + " / " + _taille : "---";
 

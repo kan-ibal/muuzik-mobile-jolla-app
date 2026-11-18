@@ -4,6 +4,8 @@
 #include <QObject>
 #include <QQmlContext>
 #include <QString>
+#include <QStringList>
+#include <QVariantList>
 #include <QList>
 
 #include <qqml.h>
@@ -201,6 +203,10 @@ signals:
      * @param uuid
      */
     void tracksChanged(const qint64 uuid);
+
+private slots:
+    void finaliserEcriture(const qint64 uuid, const QStringList &chemins, const QVariantList &durees);
+    void notifierAjout(int count, const QString &nom);
 
 public slots:
     // suppression de l'url ( et de tout les childs)

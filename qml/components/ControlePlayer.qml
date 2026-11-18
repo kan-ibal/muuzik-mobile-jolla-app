@@ -46,7 +46,7 @@ Rectangle {
             }
             onClicked: {
 
-                lecteurService.showControl=false;
+                playerService.showControl=false;
 
             //    panneauOuvert=false;
             }
@@ -83,9 +83,9 @@ Rectangle {
                         width: Theme.iconSizeSmallPlus
                         height: Theme.iconSizeSmallPlus
                     }
-                    highlighted: lecteurService.aleatoire
+                    highlighted: playerService.random
                     onClicked:  {
-                        lecteurService.switchAleatoire();}
+                        playerService.switchRandom();}
                 }
 
                 // le bp de repetition
@@ -101,8 +101,8 @@ Rectangle {
                         width: Theme.iconSizeSmallPlus
                         height: Theme.iconSizeSmallPlus
                     }
-                    highlighted:lecteurService.boucle
-                    onClicked: {lecteurService.switchBoucle();}
+                    highlighted:playerService.loop
+                    onClicked: {playerService.switchLoop();}
                 }
             }
         }
@@ -195,7 +195,7 @@ Rectangle {
                 return;
             }
 
-            lecteurService.showControl=true;
+            playerService.showControl=true;
 
            // panneauOuvert = !panneauOuvert;
         }

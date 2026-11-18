@@ -24,8 +24,8 @@
 const QRegularExpression IndexeurService::REG_fichieraudio( VFService::FILTERAUDIO, QRegularExpression::CaseInsensitiveOption);
 
 IndexeurService::IndexeurService(QObject *parent) : QObject(parent), enCours(false), dbok(false) {
-    connect(this,SIGNAL(rechargementFaitIntr()), this, SLOT(finRechargementImpl()));
-    connect(this,SIGNAL(miseAJoursFaiteIntr(quint64)), this, SLOT(finVerifierMiseAJourImpl(quint64)));
+    connect(this,SIGNAL(rechargementFaitIntr()), this, SLOT(finRechargementImpl()), Qt::QueuedConnection);
+    connect(this,SIGNAL(miseAJoursFaiteIntr(quint64)), this, SLOT(finVerifierMiseAJourImpl(quint64)), Qt::QueuedConnection);
 
     connect(&VFService::getInstance(), SIGNAL(removed(QString)),this, SLOT(onRemoved(QString)));
     connect(&VFService::getInstance(), SIGNAL(moved(QString,QString)), this, SLOT(onMoved(QString,QString)));

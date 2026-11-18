@@ -61,7 +61,7 @@ ArtWorkService::ArtWorkService(QObject *parent) :
     manager->setNetworkAccessible(QNetworkAccessManager::Accessible);
     connect(manager, SIGNAL(finished(QNetworkReply *)), this, SLOT(reponseNet(QNetworkReply*)));
 
-    connect(this, SIGNAL(doNetSearch(QString)), this, SLOT(launchNetImpl(QString)));
+    connect(this, SIGNAL(doNetSearch(QString)), this, SLOT(launchNetImpl(QString)), Qt::QueuedConnection);
 
     connect(&QDownloaderService::getInstance(), SIGNAL(success(QUrl,QString)),
             this, SLOT(downloadSuccess(QUrl,QString)));

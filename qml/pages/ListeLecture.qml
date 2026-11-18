@@ -10,7 +10,7 @@ Page {
     id:page
 
     property bool active: status===PageStatus.Active
-    property var morceau: lecteurService.titre
+    property var morceau: playerService.title
     property int wvuemettre: 0
     property bool ainfo:false
 
@@ -26,7 +26,7 @@ Page {
 
     //-----------------------------------------
     function retirer(u) {
-        lecteurService.retirerUuid(u);
+        playerService.retirerUuid(u);
     }
 
     Component{
@@ -37,7 +37,7 @@ Page {
             width: ListView.view.width
             contentHeight: listtitre.height + listinfo.height+ Theme.horizontalPageMargin
 
-            property bool _estactif : lecteurService.index === index
+            property bool _estactif : playerService.index === index
             highlighted: false
 
             Rectangle {
@@ -99,7 +99,7 @@ Page {
                 Image {
                     id:bpcontrole
                     visible:  _estactif
-                    source:  (lecteurService.etat ? "image://theme/icon-m-pause?" :"image://theme/icon-m-play?") + Theme.primaryColor
+                    source:  (playerService.status ? "image://theme/icon-m-pause?" :"image://theme/icon-m-play?") + Theme.primaryColor
                     width: Theme.iconSizeSmallPlus
                     height: Theme.iconSizeSmallPlus
                     cache: false
@@ -156,11 +156,11 @@ Page {
             }
 
             onClicked: {
-                if(lecteurService.index === index) {
-                    lecteurService.lire();
+                if(playerService.index === index) {
+                    playerService.play();
                     return;
                 }
-                lecteurService.lire(index);
+                playerService.play(index);
             }
 
             Component {
@@ -201,12 +201,10 @@ Page {
             Connections {
                 target: ARTService
                 onArtFound : {
-                    try {
-                        if( vurl !== morceau.chemin ) {
-                            return;
-                        }
-                        fond.source = artPath;
-                    }catch(e) {}
+                    if (!morceau || vurl !== morceau.chemin) {
+                        return;
+                    }
+                    fond.source = artPath;
                 }
             }
         }
@@ -229,7 +227,7 @@ Page {
             clip: true
             visible: controle.panneauOuvert === false
 
-            model: lecteurService.liste;
+            model: playerService.list;
 
             delegate: fileItem
 
@@ -243,7 +241,7 @@ Page {
                 id:menu
                 property string  minstr: vi18n.get("menu.nuit.off").arg(0)
                 onActiveChanged: {
-                    minstr=vi18n.get("menu.nuit.off").arg(App.getDuree(modeNuitService.tempRestant()));
+                    minstr=vi18n.get("menu.nuit.off").arg(App.getDuree(nightModeService.remainingTime()));
                 }
 
                 MenuItem {
@@ -251,18 +249,18 @@ Page {
                     onClicked: {pageStack.push(Qt.resolvedUrl("Configuration.qml"));}
                 }
                 MenuItem {
-                    visible: modeNuitService.actif===false && lecteurService.liste.length>0
+                    visible: nightModeService.active===false && playerService.list.length>0
                     text:  vi18n.get("menu.nuit.on")
                     onClicked: {
                         pageStack.push(Qt.resolvedUrl("Minuteur.qml"));
                     }
                 }
                 MenuItem {
-                    visible: modeNuitService.actif===true
+                    visible: nightModeService.active===true
                     //                    text:  vi18n.get("menu.nuit.off")
                     text: menu.minstr
                     onClicked: {
-                        modeNuitService.arreter();
+                        nightModeService.stop();
                     }
 
                 }
@@ -275,13 +273,15 @@ Page {
                 }
                 MenuItem {
                     text:  vi18n.get("menu.enregistrer")
-                    enabled:  lecteurService.taille !== 0
+                    enabled:  playerService.size !== 0
                     onClicked: {
 
                         var u = [];
-                        var l = lecteurService.liste;
-                        for(var i in l) {
-                            u.push(l[i].chemin);
+                        var l = playerService.list;
+                        for(var i = 0; i < l.length; i++) {
+                            if (l[i]) {
+                                u.push(l[i].chemin);
+                            }
                         }
 
                         sauver(u);
@@ -290,13 +290,13 @@ Page {
 
                 MenuItem {
                     text:  vi18n.get("menu.effacer")
-                    enabled:  lecteurService.taille !== 0
-                    onClicked: {lecteurService.effacer();}
+                    enabled:  playerService.size !== 0
+                    onClicked: {playerService.effacer();}
                 }
 
                 MenuItem {
                     text:  vi18n.get("menu.editer")
-                    enabled:  lecteurService.taille !== 0
+                    enabled:  playerService.size !== 0
                     onClicked: {pageStack.push(Qt.resolvedUrl("EditerListeLecture.qml"));}
                 }
             }
@@ -304,13 +304,13 @@ Page {
 
         ControlePlayer {
             id:controle
-            panneauOuvert: lecteurService.showControl
+            panneauOuvert: playerService.showControl
 
             anchors.bottom: parent.bottom
         }
 
         ViewPlaceholder {
-            enabled:  lecteurService.enCours === false && lecteurService.taille === 0 && status === PageStatus.Active
+            enabled:  playerService.enCours === false && playerService.size === 0 && status === PageStatus.Active
             text:  vi18n.get("enlecture.vide")
             hintText:  vi18n.get("enlecture.vide.sum")
         }
@@ -354,7 +354,7 @@ Page {
     }
 
     Attente {
-        enabled: status===PageStatus.Activating || lecteurService.enCours
+        enabled: status===PageStatus.Activating || playerService.enCours
     }
 
     onStatusChanged:  {
@@ -369,17 +369,17 @@ Page {
     }
 
     Connections {
-        target:lecteurService
+        target:playerService
 
         onDureeChanged:{
-            wvuemettre=Math.ceil( (page.width * value) / (lecteurService.dureeTitre+1) );
+            wvuemettre=Math.ceil( (page.width * value) / (playerService.dureeTitre+1) );
         }
 
         onIndexChanged: {
             wvuemettre=0;
         }
 
-        onTitreChanged: {
+        onTitleChanged: {
             if(ConfigService.voirPochette === false ) {
                 return;
             }

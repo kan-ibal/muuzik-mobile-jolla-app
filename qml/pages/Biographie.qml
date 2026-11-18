@@ -112,7 +112,9 @@ Page {
                 onClicked: {
                     LastfmService.effacerBio(artiste);
                     LastfmService.effacerBio(mbid);
-                    pageStack.navigateBack();
+                    if (!pageStack.busy) {
+                        pageStack.navigateBack();
+                    }
                 }
             }
         }

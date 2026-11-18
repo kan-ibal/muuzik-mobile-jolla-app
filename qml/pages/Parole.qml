@@ -78,7 +78,9 @@ Page {
                 enabled: texte.text.length>0
                 onClicked: {
                     ParoleService.effacer(chemin);
-                    pageStack.navigateBack();
+                    if (!pageStack.busy) {
+                        pageStack.navigateBack();
+                    }
                 }
             }
         }

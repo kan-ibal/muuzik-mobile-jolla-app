@@ -8,8 +8,7 @@
 using namespace std;
 
 #define MPRIS_OBJ "/org/mpris/MediaPlayer2"
-#define MPRIS_SERVICE "org.mpris.muuzik"
-#define MPRIS_SERVICE_ID "org.mpris.MediaPlayer2.muuzik"
+#define MPRIS_SERVICE_ID "org.mpris.MediaPlayer2.harbour-muuzik"
 #define MPRIS_ID "org.mpris.MediaPlayer2"
 #define MPRIS_PLAYER_ID "org.mpris.MediaPlayer2.Player"
 #define FREEDESKTOP_PROPERTIES "org.freedesktop.DBus.Properties"
@@ -33,16 +32,16 @@ public:
     Mpris(QObject *parent=0);
 
     //org.mpris.MediaPlayer2
-    bool getCanQuit() {return false;}
-    bool getCanRaise() {return false;}
-    bool getCanSetFullscreen() {return false;}
-    bool getFullscreen() {return false;}
-    void SetFullscreen(bool v){}
-    bool getHasTrackList(){return false;}
-    QString getIdentity(){ return "Muuzik! player" ;}
-    QString getDesktopEntry(){ return "harbour-muuzik" ;}
-    QStringList getSupportedUriSchemes() {return uri;}
-    QStringList getSupportedMimeTypes() {return mime;}
+    bool getCanQuit() const {return false;}
+    bool getCanRaise() const {return true;}
+    bool getCanSetFullscreen() const {return false;}
+    bool getFullscreen() const {return false;}
+    void SetFullscreen(bool v){ Q_UNUSED(v); }
+    bool getHasTrackList() const {return false;}
+    QString getIdentity() const { return "Muuzik! player" ;}
+    QString getDesktopEntry() const { return "harbour-muuzik" ;}
+    QStringList getSupportedUriSchemes() const {return uri;}
+    QStringList getSupportedMimeTypes() const {return mime;}
 
 private :
     QStringList uri;

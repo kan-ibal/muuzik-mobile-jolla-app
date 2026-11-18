@@ -166,7 +166,7 @@ public:
      * @return vrai si passe à la piste suivant
      */
     Q_INVOKABLE void suivant();
-    Q_INVOKABLE bool aSuivant() {return getIndex() < getTaille() - 1;}
+    Q_INVOKABLE bool aSuivant() {return playlist ? (playlist->nextIndex() != -1) : false;}
 
     /**
      * @brief passe à la piste precedente si possible.
@@ -174,7 +174,7 @@ public:
      * @return vrai si passe à la piste precedente
      */
     Q_INVOKABLE void precedent();
-    Q_INVOKABLE bool aPrecedent() {return getIndex()>0;}
+    Q_INVOKABLE bool aPrecedent() {return playlist ? (playlist->previousIndex() != -1) : false;}
 
     /**
      * @brief avance la position de la lecture dnas le morceau en cours
@@ -256,6 +256,7 @@ private:
 
     Mpris *mpris;
     MprisLecteur *mprislecteur;
+    QString mprisServiceName;
     bool sessionRestaure;
     bool sessionRestaurePlaylist;
 
@@ -339,6 +340,10 @@ protected slots :
      */
     void finChargementImp(QList<MetaData *>*liste, const qint64 position, bool autoplay);
 
+    /**
+     * @brief affiche la notification de taille max sur le thread principal
+     */
+    void notifierTailleMax();
 
 };
 

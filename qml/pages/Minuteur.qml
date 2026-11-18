@@ -4,7 +4,7 @@ import Nemo.Notifications 1.0
 import "../js/app.js" as App
 
 Dialog {
-    canAccept:lecteurService.dureeTotale> 0;
+    canAccept:playerService.dureeTotale> 0;
 
     Column {
         width: parent.width
@@ -18,22 +18,22 @@ Dialog {
         Slider {
             label: vi18n.get("nuit.temps.limite")
             minimumValue: 0
-            maximumValue: Math.max(60, lecteurService.dureeTotale)
-            enabled: lecteurService.dureeTotale > 0
+            maximumValue: Math.max(60, playerService.dureeTotale)
+            enabled: playerService.dureeTotale > 0
             stepSize: 60
             width: parent.width
-            value: modeNuitService.tempsFinal
+            value: nightModeService.endTime
             valueText: vi18n.get("nuit.temps.label").arg(App.getDuree(value));
             onValueChanged: {
-                if(modeNuitService.tempsFinal===value) {
+                if(nightModeService.endTime===value) {
                     return;
                 }
-                modeNuitService.tempsFinal=value;
+                nightModeService.endTime=value;
             }
         }
 
         Text {
-            visible: lecteurService.dureeTotale<=0
+            visible: playerService.dureeTotale<=0
             width: parent.width
             text:  vi18n.get("nuit.temps.inconnu")
             wrapMode: Text.WordWrap
@@ -44,24 +44,24 @@ Dialog {
         TextSwitch {
             text:  vi18n.get("nuit.volume")
             description: vi18n.get("nuit.volume.desc")
-            Component.onCompleted: checked = modeNuitService.reductionVolume
-            onCheckedChanged: modeNuitService.reductionVolume=checked
+            Component.onCompleted: checked = nightModeService.reductionVolume
+            onCheckedChanged: nightModeService.reductionVolume=checked
         }
 
         Slider {
-            visible: modeNuitService.reductionVolume
+            visible: nightModeService.reductionVolume
             label: vi18n.get("nuit.volume.minimal")
             minimumValue: 0
             maximumValue: Math.max(1, VolumeService.stepCount)
             enabled: VolumeService.stepCount > 0
             stepSize: 1
             width: parent.width
-            value: modeNuitService.volumeFinal
+            value: nightModeService.finalVolume
             valueText: vi18n.get("nuit.volume.label").arg(
                           VolumeService.stepCount >0 ? value * (100 /VolumeService.stepCount) : 0 );
 
             onValueChanged: {
-                if(modeNuitService.volumeFinal===value) {
+                if(nightModeService.finalVolume===value) {
                     return;
                 }
 
@@ -71,7 +71,7 @@ Dialog {
                     notification.publish();
                 }
 
-                modeNuitService.volumeFinal=value;
+                nightModeService.finalVolume=value;
             }
         }
 
@@ -83,6 +83,6 @@ Dialog {
     }
 
     onAccepted: {
-        modeNuitService.demarrer();
+        nightModeService.start();
     }
 }

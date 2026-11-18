@@ -112,10 +112,10 @@ Page {
                 onClicked: {pageStack.push(Qt.resolvedUrl("Configuration.qml"));}
             }
             MenuItem {
-                visible: modeNuitService.actif===true
+                visible: nightModeService.active===true
                 text:  vi18n.get("menu.nuit.off")
                 onClicked: {
-                    modeNuitService.arreter();
+                    nightModeService.stop();
                 }
             }
         }

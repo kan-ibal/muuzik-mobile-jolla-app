@@ -10,6 +10,8 @@
 #include <QtConcurrent/QtConcurrentRun>
 #include <qdebug.h>
 #include <qregularexpression.h>
+#include <QMetaObject>
+#include <QThread>
 
 #include "manager/plsmanager.h"
 #include "metadataservice.h"
@@ -78,7 +80,10 @@ QList<MetaData *> playlistService::ouvrir(const qint64 uuid) {
     Pls *item = liste.at(index);
 
     foreach (QString s, item->getListe()) {
-        list.append( MetaDataService::getInstance().getMetaData(s) );
+        MetaData *m = MetaDataService::getInstance().getMetaData(s);
+        if (m != NULL) {
+            list.append(m);
+        }
     }
 
     //    switch (item->getType()) {
@@ -192,21 +197,51 @@ bool playlistService::ecrire(const qint64 uuid,const QList<MetaData *> tracks) {
     }
 
     Pls *pls = liste.at(index);
+    QStringList chemins;
+    QVariantList durees;
 
     if(pls->getType() == Pls::PlsType::PLS) {
         if( plsManager::marshaller(tracks, pls->getPath()) ==false ) {
             return false;
         }
 
-        // on met a jour la donne en cache -- le fait après quand on est sur que la playlist a été enregistré
-        pls->resetUrl();
         foreach (MetaData *m, tracks) {
-            pls->ajouterUrl(m->getChemin(),m->getDuree());
+            if (m) {
+                chemins.append(m->getChemin());
+                durees.append(QVariant::fromValue(static_cast<qulonglong>(m->getDuree())));
+            }
+        }
+    }
+
+    if (QThread::currentThread() != thread()) {
+        QMetaObject::invokeMethod(this,
+                                  "finaliserEcriture",
+                                  Qt::QueuedConnection,
+                                  Q_ARG(qint64, uuid),
+                                  Q_ARG(QStringList, chemins),
+                                  Q_ARG(QVariantList, durees));
+    } else {
+        finaliserEcriture(uuid, chemins, durees);
+    }
+    return true;
+}
+
+void playlistService::finaliserEcriture(const qint64 uuid, const QStringList &chemins, const QVariantList &durees) {
+    qint64 index = trouverIndex(uuid);
+    if(index==-1) {
+        return;
+    }
+
+    Pls *pls = liste.at(index);
+    if(pls->getType() == Pls::PlsType::PLS) {
+        pls->resetUrl();
+        for (int i = 0; i < chemins.size(); ++i) {
+            quint64 d = (i < durees.size()) ? durees.at(i).toULongLong() : 0;
+            pls->ajouterUrl(chemins.at(i), d);
         }
     }
 
     emit tracksChanged(uuid);
-    return true;
 }
 
 /**
@@ -287,13 +322,26 @@ bool playlistService::ajouter(const qint64 uuid, const QList<QString> tracks) {
     // FAIT EN ECRITURE
     // on met a jour la donne en cache -- le fait après quand on est sur que la playlist a été enregistré
     Pls *pls = liste.at(index);
+    const QString plsNom = pls->getNom();
 
-    Notification n;
-    n.setPreviewBody(VI18N.get("playlists.ajouter.a").arg(tracks.length()).arg(pls->getNom()));
-    n.setHintValue("x-nemo-icon", "image://theme/icon-s-high-importance");
-    n.publish();
+    if (QThread::currentThread() != thread()) {
+        QMetaObject::invokeMethod(this,
+                                  "notifierAjout",
+                                  Qt::QueuedConnection,
+                                  Q_ARG(int, tracks.length()),
+                                  Q_ARG(QString, plsNom));
+    } else {
+        notifierAjout(tracks.length(), plsNom);
+    }
 
     return true;
+}
+
+void playlistService::notifierAjout(int count, const QString &nom) {
+    Notification n;
+    n.setPreviewBody(VI18N.get("playlists.ajouter.a").arg(count).arg(nom));
+    n.setHintValue("x-nemo-icon", "image://theme/icon-s-high-importance");
+    n.publish();
 }
 
 /**

@@ -12,6 +12,7 @@ Page {
     property real batch_id : 0      // batch_id for data on asynch call
     property bool aulecteur:true
     property bool loaded: false
+    property bool closeOnReturn: false
 
     property var listUrl : []       // on peu passer un rep ou une media seul
     // la liste est rempli sur onComplete
@@ -22,9 +23,18 @@ Page {
     }
 
     //-----------------------------------------
+    function checkCloseOnReturn() {
+        if (closeOnReturn && status === PageStatus.Active && !pageStack.busy) {
+            closeOnReturn = false;
+            pageStack.navigateBack();
+        }
+    }
+
+    //-----------------------------------------
     function retour() {
-        pageStack.completeAnimation();
-        pageStack.navigateBack();
+        if (!pageStack.busy) {
+            pageStack.navigateBack();
+        }
     }
 
     Component {
@@ -66,8 +76,10 @@ Page {
             onClicked: {
                 switch(type) {
                 case 0 :
-                    lecteurService.ajouter(listUrl);
-                    pageStack.navigateBack();
+                    playerService.add(listUrl);
+                    if (!pageStack.busy) {
+                        pageStack.navigateBack();
+                    }
                     break;
 
                     // on cree une nouvelle playlist
@@ -85,16 +97,15 @@ Page {
                         }
 
                         PlaylistService.ajouterAsync(uuid,listUrl);
-
-                        pageStack.completeAnimation();
-                        pageStack.navigateBack(PageStackAction.Immediate);
-                        pageStack.navigateBack();
+                        page.closeOnReturn = true;
                     });
                     break;
 
                 case 2 :
                     PlaylistService.ajouter(uuid,listUrl);
-                    pageStack.navigateBack();
+                    if (!pageStack.busy) {
+                        pageStack.navigateBack();
+                    }
                     break;
                 }
             }
@@ -198,5 +209,12 @@ Page {
 
             loaded=true;
         }
+    }
+
+    onStatusChanged: checkCloseOnReturn()
+
+    Connections {
+        target: pageStack
+        onBusyChanged: page.checkCloseOnReturn()
     }
 }

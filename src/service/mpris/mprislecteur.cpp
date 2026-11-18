@@ -2,15 +2,26 @@
 #include "../pulse/volumeProxy.h"
 #include "../artwork.h"
 #include "../../virtualfiles/VFservice.h"
+#include <QFileInfo>
 #include <QUrl>
 
-MprisLecteur::MprisLecteur(lecteurService *s): QDBusAbstractAdaptor(s),service(s),taille(0) {
+#define MPRIS_TRACK_PREFIX "/org/mpris/MediaPlayer2/Track/"
+
+MprisLecteur::MprisLecteur(lecteurService *s)
+    : QDBusAbstractAdaptor(s)
+    , service(s)
+    , lastPlaybackStatus(QStringLiteral("Stopped"))
+    , lastCanPlay(false)
+    , lastCanPause(false)
+    , lastCanSeek(false)
+    , lastCanGoNext(false)
+    , lastCanGoPrevious(false) {
     connect(s,SIGNAL(titreChanged(MetaData*)),this, SLOT(changementTitre(MetaData*)));
     connect(s,SIGNAL(listeChanged()),this, SLOT(changementPlaylist()));
     connect(s,SIGNAL(modeChanged()),this, SLOT(changementMode()));
     connect(s,SIGNAL(etatChanged(bool)),this, SLOT(changementEtat(bool)));
     connect(&ArtWorkService::getInstance(), SIGNAL(artFound(QString,QString)),
-            this, SLOT(changementPochette(QString,QString)));
+            this, SLOT(changementPochette(QString,QString)), Qt::QueuedConnection);
 }
 
 /**
@@ -129,7 +140,7 @@ void MprisLecteur::SetPosition(const QDBusObjectPath &TrackId, qlonglong Positio
         return;
     }
 
-    QString expectedPath = QString("/org/mpris/MediaPlayer2/muuzik/%1").arg(qAbs(t->getUuid()));
+    QString expectedPath = QString("%1%2").arg(MPRIS_TRACK_PREFIX).arg(qAbs(t->getUuid()));
     if (TrackId.path() != expectedPath) {
         return;
     }
@@ -166,15 +177,18 @@ void  MprisLecteur::OpenUri(QString uri){
  * @return
  */
 QString MprisLecteur::getPlaybackStatus() {
-    if (service->getEtat()==true) {
-        return "Playing";
+    if (!service) {
+        return QStringLiteral("Stopped");
+    }
+    if (service->getEtat() == true) {
+        return QStringLiteral("Playing");
     }
 
-    if(service->getTaille()==0) {
-        return "Stopped";
+    if (service->getTaille() == 0) {
+        return QStringLiteral("Stopped");
     }
 
-    return "Paused";
+    return QStringLiteral("Paused");
 }
 
 /**
@@ -267,7 +281,7 @@ void MprisLecteur::setVolume(double v) {
  * @return
  */
 bool MprisLecteur::getCanGoNext() {
-    return service->aSuivant();
+    return service && service->aSuivant();
 }
 
 /**
@@ -275,7 +289,7 @@ bool MprisLecteur::getCanGoNext() {
  * @return
  */
 bool MprisLecteur::getCanGoPrevious() {
-    return service->aPrecedent();
+    return service && service->aPrecedent();
 }
 
 /**
@@ -283,7 +297,15 @@ bool MprisLecteur::getCanGoPrevious() {
  * @return
  */
 bool MprisLecteur::getCanPlay() {
-    return service->getTaille()>0;
+    return service && service->getTaille() > 0;
+}
+
+bool MprisLecteur::getCanPause() {
+    return service && service->getTaille() > 0;
+}
+
+bool MprisLecteur::getCanSeek() {
+    return service && service->getTaille() > 0;
 }
 
 /**
@@ -297,7 +319,7 @@ void MprisLecteur::buildMetadata(MetaData *t) {
     if( t != NULL ) {
         currentTrackChemin = t->getChemin();
 
-        QString trackPath = QString("/org/mpris/MediaPlayer2/muuzik/%1").arg(qAbs(t->getUuid()));
+        QString trackPath = QString("%1%2").arg(MPRIS_TRACK_PREFIX).arg(qAbs(t->getUuid()));
         metadata.insert("mpris:trackid", QVariant::fromValue(QDBusObjectPath(trackPath)));
 
         qlonglong lengthUs = 0;
@@ -310,9 +332,17 @@ void MprisLecteur::buildMetadata(MetaData *t) {
             metadata.insert("mpris:length", QVariant::fromValue(lengthUs));
         }
 
-        if(!t->getTitre().isEmpty()) {
-            metadata.insert("xesam:title", t->getTitre());
+        QString title = t->getTitre();
+        if (title.isEmpty() && !currentTrackChemin.isEmpty()) {
+            title = QFileInfo(currentTrackChemin).completeBaseName();
+            if (title.isEmpty()) {
+                title = currentTrackChemin;
+            }
         }
+        if (!title.isEmpty()) {
+            metadata.insert("xesam:title", title);
+        }
+
         if(!t->getAlbum().isEmpty()) {
             metadata.insert("xesam:album", t->getAlbum());
         }
@@ -329,6 +359,44 @@ void MprisLecteur::buildMetadata(MetaData *t) {
     }
 }
 
+void MprisLecteur::appendCapabilityChanges(QVariantMap &p) {
+    QString status = getPlaybackStatus();
+    if (status != lastPlaybackStatus) {
+        lastPlaybackStatus = status;
+        p.insert("PlaybackStatus", status);
+    }
+
+    bool canPlay = getCanPlay();
+    if (canPlay != lastCanPlay) {
+        lastCanPlay = canPlay;
+        p.insert("CanPlay", canPlay);
+    }
+
+    bool canPause = getCanPause();
+    if (canPause != lastCanPause) {
+        lastCanPause = canPause;
+        p.insert("CanPause", canPause);
+    }
+
+    bool canSeek = getCanSeek();
+    if (canSeek != lastCanSeek) {
+        lastCanSeek = canSeek;
+        p.insert("CanSeek", canSeek);
+    }
+
+    bool canGoNext = getCanGoNext();
+    if (canGoNext != lastCanGoNext) {
+        lastCanGoNext = canGoNext;
+        p.insert("CanGoNext", canGoNext);
+    }
+
+    bool canGoPrevious = getCanGoPrevious();
+    if (canGoPrevious != lastCanGoPrevious) {
+        lastCanGoPrevious = canGoPrevious;
+        p.insert("CanGoPrevious", canGoPrevious);
+    }
+}
+
 /**
  * @brief MprisLecteur::changementTitre
  * @param t
@@ -338,8 +406,7 @@ void MprisLecteur::changementTitre(MetaData *t) {
 
     QVariantMap p;
     p.insert("Metadata", metadata);
-    p.insert("CanGoNext", getCanGoNext());
-    p.insert("CanGoPrevious", getCanGoPrevious());
+    appendCapabilityChanges(p);
 
     sendDBusProperty(p);
 }
@@ -373,7 +440,9 @@ void MprisLecteur::changementPochette(const QString &vurl, const QString &artPat
     }
 
     if (vurl == currentTrackChemin || VFI.getParentVUrl(currentTrackChemin) == vurl) {
-        QString fileUrl = QUrl::fromLocalFile(artPath).toString();
+        QString fileUrl = (artPath.startsWith("file://") || artPath.startsWith("http://") || artPath.startsWith("https://"))
+                ? artPath
+                : QUrl::fromLocalFile(artPath).toString();
         if (metadata.value("mpris:artUrl").toString() != fileUrl) {
             metadata.insert("mpris:artUrl", fileUrl);
             QVariantMap p;
@@ -387,22 +456,8 @@ void MprisLecteur::changementPochette(const QString &vurl, const QString &artPat
  * @brief MprisLecteur::changementPlaylist
  */
 void MprisLecteur::changementPlaylist() {
-
     QVariantMap p;
-
-    quint64 t=service->getTaille();
-
-    if( t!=taille) {
-        taille=t;
-        bool b=getCanPlay();
-        p.insert("CanPlay", b);
-        p.insert("CanPause", b);
-        p.insert("CanSeek", b);
-    }
-
-    p.insert("CanGoNext", getCanGoNext());
-    p.insert("CanGoPrevious", getCanGoPrevious());
-
+    appendCapabilityChanges(p);
     sendDBusProperty(p);
 }
 
@@ -413,12 +468,17 @@ void MprisLecteur::changementPlaylist() {
 void MprisLecteur::changementEtat(bool s) {
     Q_UNUSED(s);
     QVariantMap p;
-    p.insert("PlaybackStatus", getPlaybackStatus());
 
     MetaData *t = service->getTitre();
     if (t != NULL && metadata.isEmpty()) {
         buildMetadata(t);
         p.insert("Metadata", metadata);
+    }
+
+    appendCapabilityChanges(p);
+    if (!p.contains("PlaybackStatus")) {
+        lastPlaybackStatus = getPlaybackStatus();
+        p.insert("PlaybackStatus", lastPlaybackStatus);
     }
 
     sendDBusProperty(p);
@@ -431,6 +491,7 @@ void MprisLecteur::changementMode() {
     QVariantMap p;
     p.insert("Shuffle", getShuffle());
     p.insert("LoopStatus", getLoopStatus());
+    appendCapabilityChanges(p);
     sendDBusProperty(p);
 }
 
@@ -438,7 +499,7 @@ void MprisLecteur::changementMode() {
  * @brief MprisLecteur::sendDBusProperty
  * @param value
  */
-void MprisLecteur::sendDBusProperty(const QVariantMap value) {
+void MprisLecteur::sendDBusProperty(const QVariantMap &value) {
     if (value.isEmpty()) {
         return;
     }

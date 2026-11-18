@@ -16,13 +16,13 @@ Page {
 
     //-----------------------------------------
     function ouvrir(url) {
-        lecteurService.remplacer([url]);
+        playerService.replace([url]);
         pageStack.push(Qt.resolvedUrl("ListeLecture.qml"));
     }
 
     //-----------------------------------------
     function ajouter(url) {
-        lecteurService.ajouter([url]);
+        playerService.add([url]);
     }
 
     //-----------------------------------------

@@ -5,7 +5,7 @@ import "../../js/app.js" as App
 Item {
     id:info
 
-    property var morceau: lecteurService.titre
+    property var morceau: playerService.title
 
     anchors {
         horizontalCenter: parent.horizontalCenter

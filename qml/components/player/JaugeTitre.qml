@@ -6,13 +6,13 @@ import "../../js/app.js" as App
 Item {
     id:jauge
 
-    property var morceau: lecteurService.titre
+    property var morceau: playerService.title
 
-    property int _index: lecteurService.index   // index of the current title
-    property int _taille: lecteurService.taille     // size of the list
-    property int _tempsTotalListe: lecteurService.dureeTotale // total runs
+    property int _index: playerService.index   // index of the current title
+    property int _taille: playerService.size     // size of the list
+    property int _tempsTotalListe: playerService.dureeTotale // total runs
     property int _tempsbaseListe: 0                      // as mentioned in the previous section
-    property int _ecouteTitre: lecteurService.getPosition()                    // already listened to the track
+    property int _ecouteTitre: playerService.getPosition()                    // already listened to the track
 
     width: parent.width
     height: fond.height + compteur.height
@@ -20,16 +20,18 @@ Item {
     //-----------------------------------------
     function mettreAJourInfoListe() {
         // we recalculate the base time
-
-        var l = lecteurService.liste;
-        var tm=0;
-        for(var i=0 ; i<l.length ; i++ ) {
-            if(i===_index) {
-                break;
+        var l = playerService.list;
+        var tm = 0;
+        var idx = playerService.index;
+        if (l && idx > 0) {
+            var limit = Math.min(idx, l.length);
+            for (var i = 0; i < limit; i++) {
+                if (l[i]) {
+                    tm += l[i].duree;
+                }
             }
-            tm+=l[i].duree;
         }
-        _tempsbaseListe=tm;
+        _tempsbaseListe = tm;
     }
 
     ImageRound {
@@ -45,21 +47,17 @@ Item {
         Connections {
             target: ARTService
             onArtFound : {
-                try {
-                    if( vurl !== morceau.chemin ) {
-                        return;
-                    }
-                    fond.source = artPath;
-                }catch(e) {}
+                if (!morceau || vurl !== morceau.chemin) {
+                    return;
+                }
+                fond.source = artPath;
             }
 
             onArtNotFound : {
-                try {
-                    if( vurl !== morceau.chemin ) {
-                        return;
-                    }
-                    fond.source = "image://muuzik/img/son?"+ Theme.primaryColor
-                }catch(e) {}
+                if (!morceau || vurl !== morceau.chemin) {
+                    return;
+                }
+                fond.source = "image://muuzik/img/son?" + Theme.primaryColor;
             }
         }
 
@@ -131,19 +129,19 @@ Item {
             ARTService.getArtAsync(morceau.chemin);
         }
 
-        _ecouteTitre = lecteurService.getPosition();
+        _ecouteTitre = playerService.getPosition();
         mettreAJourInfoListe();
     }
 
     onVisibleChanged: {
         if (visible) {
-            _ecouteTitre = lecteurService.getPosition();
+            _ecouteTitre = playerService.getPosition();
             mettreAJourInfoListe();
         }
     }
 
     Connections {
-        target:lecteurService
+        target:playerService
 
         onDureeChanged:{
 //            if(jauge.visible===false) {
@@ -153,9 +151,9 @@ Item {
             _ecouteTitre = value;
         }
 
-        onTitreChanged: {
+        onTitleChanged: {
             //   _tempsTitre = t.duree;
-            _ecouteTitre = lecteurService.getPosition();
+            _ecouteTitre = playerService.getPosition();
 
             // on reinitialise la pochette au cas on la prochaine ne soit pas trouvé
 //            fond.source = "image://muuzik/img/son?" + Theme.primaryColor
@@ -167,7 +165,7 @@ Item {
             mettreAJourInfoListe();
         }
 
-        onListeChanged: {
+        onListChanged: {
             mettreAJourInfoListe();
         }
     }

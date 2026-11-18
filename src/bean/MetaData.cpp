@@ -18,9 +18,14 @@ MetaData::~MetaData() {
  * @return
  */
 qint64 MetaData::dureeListe(const QList<MetaData *> *l) {
+    if (!l) {
+        return 0;
+    }
     qint64 d=0;
     foreach (MetaData *t,*l) {
-        d+=t->getDuree();
+        if (t) {
+            d+=t->getDuree();
+        }
     }
 
     return d;
@@ -46,8 +51,14 @@ QString MetaData::dureeString(const qint64 d) {
   */
 QList<QMediaContent> MetaData::versMediaContent(QList<MetaData *> *s) {
     QList<QMediaContent> l;
+    if (!s) {
+        return l;
+    }
 
     foreach (MetaData *t, *s) {
+        if (!t) {
+            continue;
+        }
         QString url = VFI.getPathFromVUrl(t->getChemin());
         l.append(QMediaContent(QUrl::fromLocalFile(url)));
     }
@@ -61,6 +72,9 @@ QList<QMediaContent> MetaData::versMediaContent(QList<MetaData *> *s) {
   * @return
   */
 QMediaContent MetaData::versMediaContent(MetaData *t) {
+    if (!t) {
+        return QMediaContent();
+    }
     QString url = VFI.getPathFromVUrl(t->getChemin());
     return QMediaContent(QUrl::fromLocalFile(url));
 }

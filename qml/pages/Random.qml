@@ -22,7 +22,7 @@ Dialog {
 
     onAccepted: {
         console.log("load: " + albumPath)
-        lecteurService.remplacer([albumPath])
+        playerService.replace([albumPath])
     }
 
     //---------------------------------------

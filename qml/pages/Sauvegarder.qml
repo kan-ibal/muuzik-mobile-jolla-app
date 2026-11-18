@@ -8,6 +8,7 @@ Page {
     property bool active: status===PageStatus.Active
     property var url
     property bool loaded: false
+    property bool closeOnReturn: false
 
     //-----------------------------------------
     function recharger() {
@@ -15,9 +16,18 @@ Page {
     }
 
     //-----------------------------------------
+    function checkCloseOnReturn() {
+        if (closeOnReturn && status === PageStatus.Active && !pageStack.busy) {
+            closeOnReturn = false;
+            pageStack.navigateBack();
+        }
+    }
+
+    //-----------------------------------------
     function retour() {
-        pageStack.completeAnimation();
-        pageStack.navigateBack();
+        if (!pageStack.busy) {
+            pageStack.navigateBack();
+        }
     }
 
     Component {
@@ -73,16 +83,15 @@ Page {
                         }
 
                         PlaylistService.ecrireAsync(uuid,url);
-
-                        pageStack.completeAnimation();
-                        pageStack.navigateBack(PageStackAction.Immediate);
-                        pageStack.navigateBack();
+                        page.closeOnReturn = true;
                     });
                     break;
 
                 case 2 :
                     PlaylistService.ecrireAsync(uuid,url);
-                    pageStack.navigateBack();
+                    if (!pageStack.busy) {
+                        pageStack.navigateBack();
+                    }
                     break;
                 }
             }
@@ -158,6 +167,12 @@ Page {
             recharger();
             loaded = true;
         }
+        checkCloseOnReturn();
+    }
+
+    Connections {
+        target: pageStack
+        onBusyChanged: page.checkCloseOnReturn()
     }
 
     Attente {

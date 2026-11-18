@@ -15,8 +15,16 @@ Dialog {
 
     property real batch_id : 0      // batch_id for data on asynch call
     property bool loaded: false
+    property bool acceptOnReturn: false
 
     property string selection:""
+
+    function checkAcceptOnReturn() {
+        if (acceptOnReturn && status === PageStatus.Active && !pageStack.busy) {
+            acceptOnReturn = false;
+            page.accept();
+        }
+    }
 
     //-----------------------------------------
     function open(item) {
@@ -138,9 +146,7 @@ Dialog {
 
                 dialog.accepted.connect(function() {
                     page.selection = VFService.mkVUrl( page.uri, dialog.valeur );
-                    pageStack.completeAnimation();
-                    pageStack.navigateBack(PageStackAction.Immediate);
-                    page.accept();
+                    page.acceptOnReturn = true;
                 });
             }
         }
@@ -160,6 +166,12 @@ Dialog {
 
             page.batch_id = VFService.get(uri,filter)
         }
+        checkAcceptOnReturn();
+    }
+
+    Connections {
+        target: pageStack
+        onBusyChanged: page.checkAcceptOnReturn()
     }
 
     Connections {

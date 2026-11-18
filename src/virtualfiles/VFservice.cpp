@@ -9,6 +9,7 @@
 #include <QDateTime>
 #include <QFuture>
 #include <QtConcurrent/QtConcurrentRun>
+#include <QThread>
 #include <stdio.h>
 #include <utime.h>
 
@@ -594,9 +595,14 @@ quint64 VFService::get(const QString &vurl, const QString &filter, VFType type, 
  */
 void VFService::doGet(quint64 id, const QString &vurl, const QString &filter,VFType type, VFOrder order) {
     QList<VFInfo *> list = VFI.getSynch(vurl, filter, type, order );
+    QThread *serviceThread = VFI.thread();
+    const bool needMove = (serviceThread && QThread::currentThread() != serviceThread);
 
     QVariantList v;
     foreach (VFInfo *t, list) {
+        if (needMove && t) {
+            t->moveToThread(serviceThread);
+        }
         v.append(QVariant::fromValue(t));
     }
 
@@ -860,6 +866,10 @@ VFStat *VFService::getStatSynch(const QString &vurl, const QString &filter) {
 void VFService::doStat(quint64 id, const QString &vurl, const QString &filter) {
 
     VFStat *stat = VFI.getStatSynch(vurl, filter);
+    QThread *serviceThread = VFI.thread();
+    if (stat && serviceThread && QThread::currentThread() != serviceThread) {
+        stat->moveToThread(serviceThread);
+    }
     emit VFI.statAvailable(id, QVariant::fromValue(stat));
 }
 

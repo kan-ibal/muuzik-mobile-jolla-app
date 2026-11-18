@@ -8,6 +8,9 @@
 #include <QStack>
 #include <QStandardPaths>
 #include <QCoreApplication>
+#include <QQmlEngine>
+#include <QMetaObject>
+#include <QThread>
 
 #include "config.h"
 #include "../app.h"
@@ -43,7 +46,8 @@ lecteurService::lecteurService(QObject *parent)
     connect(this,
             SIGNAL(chargementFaitIntr(QList<MetaData*>*,qint64,bool)),
             this,
-            SLOT(finChargementImp(QList<MetaData*>*,qint64,bool))
+            SLOT(finChargementImp(QList<MetaData*>*,qint64,bool)),
+            Qt::QueuedConnection
             );
 
     // le lecteur
@@ -63,8 +67,17 @@ lecteurService::lecteurService(QObject *parent)
 
     QDBusConnection session = QDBusConnection::sessionBus();
     session.registerObject(MPRIS_OBJ, this);
-    session.registerService(MPRIS_SERVICE);
-    session.registerService(MPRIS_SERVICE_ID);
+    mprisServiceName = QStringLiteral(MPRIS_SERVICE_ID);
+    if (!session.registerService(mprisServiceName)) {
+        QString instanceName = QString("%1.instance%2")
+                .arg(MPRIS_SERVICE_ID)
+                .arg(QCoreApplication::applicationPid());
+        if (session.registerService(instanceName)) {
+            mprisServiceName = instanceName;
+        } else {
+            mprisServiceName.clear();
+        }
+    }
 
     // nemo.voicecall
     session.connect("",
@@ -110,8 +123,10 @@ void lecteurService::arreter() {
     }
 
     QDBusConnection session = QDBusConnection::sessionBus();
-    session.unregisterService(MPRIS_SERVICE);
-    session.unregisterService(MPRIS_SERVICE_ID);
+    if (!mprisServiceName.isEmpty()) {
+        session.unregisterService(mprisServiceName);
+        mprisServiceName.clear();
+    }
     session.unregisterObject(MPRIS_OBJ);
 
     session.disconnect("",
@@ -189,9 +204,11 @@ void lecteurService::remplacer(const QList<QString> &vurl, bool recursif) {
     // arrête le player et vide la liste
     if (media) media->stop();
     if (playlist) playlist->clear();
-    //qDeleteAll(liste);
     liste.clear();
     dureeTotale=0;
+    emit listeChanged();
+    emit titreChanged(NULL);
+    emit etatChanged(false);
 
     bool autoplay = configService::getInstance().getAutoStart() && (!media || media->state() != QMediaPlayer::PlayingState) ;
 
@@ -219,7 +236,10 @@ void lecteurService::doChargement(const QList<QString> &vurls, bool recursif, qi
         if( VFI.isDirectory(source)) {
             // on ajoute pas à l'historique si on est ne train de faire une restauration
             if(lecteurService::getInstance().isSessionRestaurePlaylist()==false) {
-                HistoriqueService::getInstance().ajouter(source);
+                QMetaObject::invokeMethod(&HistoriqueService::getInstance(),
+                                          "ajouter",
+                                          Qt::QueuedConnection,
+                                          Q_ARG(QString, source));
             }
 
             QList<VFInfo *> res = VFI.getSynch(source, VFService::FILTERAUDIO,
@@ -229,18 +249,27 @@ void lecteurService::doChargement(const QList<QString> &vurls, bool recursif, qi
         }
 
         // un fichier (audio) ajoute
-        li->append( VFI.getInfo(source) );
+        VFInfo *singleInfo = VFI.getInfo(source);
+        if (singleInfo) {
+            li->append(singleInfo);
+        }
     }
 
     QList<MetaData *> *ll = new QList<MetaData *>();
     foreach(VFInfo *info, *li) {
-        ll->append( MetaDataService::getInstance().getMetaData( info->getVUrl()) );
+        if (!info) {
+            continue;
+        }
+        MetaData *meta = MetaDataService::getInstance().getMetaData( info->getVUrl());
+        if (!meta) {
+            continue;
+        }
+        ll->append(meta);
 
         if(ll->length()>MAX_TAILLE_PLAYLIST) {
-            Notification n;
-            n.setPreviewBody(vI18n::getInstance().get( "lecteur.taillemax" ));
-            n.setHintValue("x-nemo-icon", "image://theme/icon-s-high-importance");
-            n.publish();
+            QMetaObject::invokeMethod(&lecteurService::getInstance(),
+                                      "notifierTailleMax",
+                                      Qt::QueuedConnection);
             break;
         }
     }
@@ -283,6 +312,13 @@ void lecteurService::doChargement(const QList<QString> &vurls, bool recursif, qi
     emit lecteurService::getInstance().chargementFaitIntr(ll,position,autoplay);
 }
 
+void lecteurService::notifierTailleMax() {
+    Notification n;
+    n.setPreviewBody(vI18n::getInstance().get( "lecteur.taillemax" ));
+    n.setHintValue("x-nemo-icon", "image://theme/icon-s-high-importance");
+    n.publish();
+}
+
 /**
  * @brief la liste de lecture est créé et disponible pour affichage
  * @param ll
@@ -296,20 +332,35 @@ void lecteurService::finChargementImp(QList<MetaData *>*ll, const qint64 positio
     raf=false;
     emit  enCoursChanged();
 
-    if(ll->length()==0) {
+    QList<MetaData *> validTracks;
+    foreach (MetaData *t, *ll) {
+        if (t) {
+            QQmlEngine::setObjectOwnership(t, QQmlEngine::CppOwnership);
+            validTracks.append(t);
+        }
+    }
+
+    if(validTracks.isEmpty()) {
         sessionRestaurePlaylist=false;
         pendingRestorePositionMs = -1;
+        emit listeChanged();
+        emit titreChanged(NULL);
+        emit etatChanged(false);
         delete ll;
         return;
     }
 
-    if(playlist) {
-        playlist->addMedia( MetaData::versMediaContent(ll) );
-    }
-    liste.append(*ll);
+    liste.append(validTracks);
 
+    dureeTotale = 0;
     foreach (MetaData *t, liste) {
-        dureeTotale+=t->getDuree();
+        if (t) {
+            dureeTotale += t->getDuree();
+        }
+    }
+
+    if(playlist) {
+        playlist->addMedia( MetaData::versMediaContent(&validTracks) );
     }
 
     // debut de liste : ne peut venir que d'une restauration
@@ -405,6 +456,9 @@ void lecteurService::persistSession() {
     QList<QString> l;
     int count = 0;
     foreach (MetaData *t, liste) {
+        if (!t) {
+            continue;
+        }
         l.append(t->getChemin());
         if (++count >= MAX_TAILLE_PLAYLIST) {
             break;
@@ -473,14 +527,18 @@ int lecteurService::getPosition() const {
  */
 void lecteurService::retirerUuid(qint64 uuid) {
     qint64 index = trouverIndex(uuid);
-    if(index==-1) {
+    if(index < 0 || index >= liste.size()) {
         return;
     }
 
-    if(playlist) {
+    MetaData *removed = liste.takeAt(index);
+    if (removed) {
+        dureeTotale = qMax<qint64>(0, dureeTotale - removed->getDuree());
+    }
+
+    if(playlist && index < playlist->mediaCount()) {
         playlist->removeMedia(index);
     }
-    liste.removeAt(index);
 
     persistSession();
     emit listeChanged();
@@ -492,7 +550,7 @@ void lecteurService::retirerUuid(qint64 uuid) {
  */
 void lecteurService::monterUuid(const qint64 uuid) {
     qint64 position = trouverIndex(uuid);
-    if(position==-1 || !playlist) {
+    if(position <= 0 || position >= liste.size() || !playlist || playlist->mediaCount() != liste.size()) {
         return;
     }
 
@@ -520,7 +578,7 @@ void lecteurService::monterUuid(const qint64 uuid) {
  */
 void lecteurService::descendreUuid(const qint64 uuid) {
     qint64 position = trouverIndex(uuid);
-    if(position==-1 || !playlist) {
+    if(position < 0 || position + 1 >= liste.size() || !playlist || playlist->mediaCount() != liste.size()) {
         return;
     }
 
@@ -528,7 +586,7 @@ void lecteurService::descendreUuid(const qint64 uuid) {
 
     if(position==playlist->currentIndex()) {
         QMediaContent m = playlist->media(position+1);
-        playlist->insertMedia(position-1, m);
+        playlist->insertMedia(position, m);
         playlist->removeMedia(position+2);
         persistSession();
         emit listeChanged();
@@ -555,7 +613,11 @@ MetaData *lecteurService::getTitre() const {
         return NULL;
     }
 
-    return liste.at(idx);
+    MetaData *t = liste.at(idx);
+    if (t) {
+        QQmlEngine::setObjectOwnership(t, QQmlEngine::CppOwnership);
+    }
+    return t;
 }
 
 /**
@@ -578,6 +640,7 @@ void lecteurService::effacer() {
     persistSession();
     emit listeChanged();
     emit titreChanged(NULL);
+    emit etatChanged(false);
 }
 
 /**
@@ -804,7 +867,7 @@ qint64 lecteurService::trouverIndex( const qint64 uuid) const {
     qint64 index = 0;
 
     foreach (MetaData *t , liste) {
-        if (t->getUuid()==uuid ) {
+        if (t && t->getUuid()==uuid ) {
             return index;
         }
         index++;
@@ -871,7 +934,7 @@ void lecteurService::onRemoved(QString vurl) {
     QStack<qint64> stack;
 
     foreach (MetaData *m, liste) {
-        if(m->getChemin().startsWith(vurl)) {
+        if(m && m->getChemin().startsWith(vurl)) {
             stack.push(m->getUuid());
         }
     }
@@ -893,6 +956,9 @@ void lecteurService::onMoved(QString vurl, QString as) {
 
     for (int i = 0 ; i < liste.size() ; i++) {
         MetaData *m = liste.at(i);
+        if (!m) {
+            continue;
+        }
 
         if ( m->getChemin().startsWith(vurl) ) {
             QString target = m->getChemin().replace(vurl, as);

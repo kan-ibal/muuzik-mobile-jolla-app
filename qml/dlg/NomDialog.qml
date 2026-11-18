@@ -21,8 +21,13 @@ Dialog {
             width: parent.width
             focus:true
 
-            EnterKey.enabled: text.length >= dlg.mini
-            EnterKey.onClicked: dlg.accept()
+            EnterKey.enabled: dlg.canAccept
+            EnterKey.onClicked: {
+                Qt.inputMethod.commit()
+                if (dlg.canAccept && dlg.status === PageStatus.Active && !pageStack.busy) {
+                    dlg.accept()
+                }
+            }
         }
     }
 

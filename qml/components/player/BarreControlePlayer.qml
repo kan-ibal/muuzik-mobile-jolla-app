@@ -30,8 +30,8 @@ Item {
             height: width
         }
 
-        onClicked: lecteurService.precedent()
-        enabled: lecteurService.index>0
+        onClicked: playerService.previous()
+        enabled: playerService.index>0
     }
 
     IconButton {
@@ -43,12 +43,12 @@ Item {
         width: parent.tailleBp
         height: width
         icon {
-            source: (lecteurService.etat ? "image://theme/icon-m-pause?" : "image://theme/icon-m-play?") + couleur
+            source: (playerService.status ? "image://theme/icon-m-pause?" : "image://theme/icon-m-play?") + couleur
             width: parent.tailleBp
             height: width
         }
 
-        onClicked: lecteurService.lire()
+        onClicked: playerService.play()
     }
 
     IconButton {
@@ -66,7 +66,7 @@ Item {
             height: width
         }
 
-        onClicked: lecteurService.suivant()
-        enabled: lecteurService.index<lecteurService.taille
+        onClicked: playerService.next()
+        enabled: playerService.index<playerService.size
     }
 }

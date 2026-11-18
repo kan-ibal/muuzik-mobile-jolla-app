@@ -32,31 +32,65 @@ ApplicationWindow
 
     MediaKey {
         id: mediaNext
-        enabled: true
+        enabled: app.applicationActive
         key: Qt.Key_MediaNext
         onPressed : {
             console.log("Key_MediaNext")
-            lecteurService.suivant()
+            playerService.next()
         }
     }
 
     MediaKey {
         id: mediaPrev
-        enabled: true
+        enabled: app.applicationActive
         key: Qt.Key_MediaPrevious
         onPressed : {
             console.log("Key_MediaPrevious")
-            lecteurService.precedent()
+            playerService.previous()
+        }
+    }
+
+    MediaKey {
+        id: mediaTogglePlayPause
+        enabled: app.applicationActive
+        key: Qt.Key_MediaTogglePlayPause
+        onPressed : {
+            console.log("Key_MediaTogglePlayPause")
+            playerService.play()
         }
     }
 
     MediaKey {
         id: mediaPlay
-        enabled: true
-        key: Qt.Key_MediaTogglePlayPause
+        enabled: app.applicationActive
+        key: Qt.Key_MediaPlay
         onPressed : {
-            console.log("Key_MediaTogglePlayPause")
-            lecteurService.lire()
+            console.log("Key_MediaPlay")
+            if (!playerService.status) {
+                playerService.play()
+            }
+        }
+    }
+
+    MediaKey {
+        id: mediaPause
+        enabled: app.applicationActive
+        key: Qt.Key_MediaPause
+        onPressed : {
+            console.log("Key_MediaPause")
+            if (playerService.status) {
+                playerService.play()
+            }
+        }
+    }
+
+    MediaKey {
+        id: mediaStop
+        enabled: app.applicationActive
+        key: Qt.Key_MediaStop
+        onPressed : {
+            console.log("Key_MediaStop")
+            playerService.stop()
         }
     }
 
@@ -73,11 +107,11 @@ ApplicationWindow
     }
 
     Component.onCompleted: {
-         lecteurService.restaurerSession();
+         playerService.restoreSession();
     }
 
     Component.onDestruction: {
-        lecteurService.sauverSession();
+        playerService.saveSession();
     }
 }
 

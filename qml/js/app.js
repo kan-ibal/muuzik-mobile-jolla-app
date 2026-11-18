@@ -119,7 +119,7 @@ var ouvrir=function (v) {
   *
   */
 var ecouter=function (v) {
-    lecteurService.remplacer([v]);
+    playerService.replace([v]);
     pageStack.push(Qt.resolvedUrl("../pages/ListeLecture.qml"));
 }
 
@@ -127,7 +127,7 @@ var ecouter=function (v) {
   *
   */
 var ajouter=function (v) {
-    lecteurService.ajouter([v]);
+    playerService.add([v]);
 }
 
 

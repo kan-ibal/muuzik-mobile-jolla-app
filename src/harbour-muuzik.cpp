@@ -46,7 +46,7 @@
 
 #include "service/config.h"
 //#include "service/navigateur.h"
-#include "service/lecteur.h"
+#include "service/player.h"
 #include "service/playlist.h"
 #include "service/favoris.h"
 #include "service/infos.h"
@@ -56,7 +56,7 @@
 #include "service/indexeur.h"
 #include "service/recherche.h"
 #include "service/historique.h"
-#include "service/modenuit.h"
+#include "service/nightmode.h"
 #include "service/pulse/volumeProxy.h"
 #include "service/recent.h"
 #include "service/metadataservice.h"
@@ -121,8 +121,8 @@ int main(int argc, char *argv[])
     recentService::init(view->rootContext());
     paroleService::init(view->rootContext());
     playlistService::init(view->rootContext());
-    lecteurService::init(view->rootContext());
-    modeNuitService::init(view->rootContext());
+    playerService::init(view->rootContext());
+    nightModeService::init(view->rootContext());
     lastfmService::init(view->rootContext());
 
     //VI18N.setLanguage("de");
@@ -132,7 +132,7 @@ int main(int argc, char *argv[])
 
 
     QObject::connect(app.data(), &QGuiApplication::aboutToQuit, [&]() {
-        lecteurService::getInstance().sauverSession();
+        playerService::getInstance().saveSession();
         VolumeProxy::getInstance().cleanup();
     });
 
@@ -142,7 +142,7 @@ int main(int argc, char *argv[])
     view->showFullScreen();
 
     int ret = app->exec();
-    lecteurService::getInstance().arreter();
+    playerService::getInstance().arreter();
     VolumeProxy::getInstance().cleanup();
     return ret;
 }

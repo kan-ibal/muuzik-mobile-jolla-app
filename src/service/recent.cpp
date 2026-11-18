@@ -34,7 +34,7 @@ bool classerItem(recentService::Item & a, recentService::Item & b) {
 recentService::recentService(QObject *parent) : QObject(parent), raf(false) {
     qRegisterMetaType<QList<Item> >( "QList<Item>" );
 
-    connect(this,SIGNAL(rechargementFaitIntr(QList<Item>)), this, SLOT(finRechargementImpl(QList<Item>)));
+    connect(this,SIGNAL(rechargementFaitIntr(QList<Item>)), this, SLOT(finRechargementImpl(QList<Item>)), Qt::QueuedConnection);
 
     connect(&VFService::getInstance(), SIGNAL(removed(QString)),this, SLOT(onRemoved(QString)));
     connect(&VFService::getInstance(), SIGNAL(moved(QString,QString)), this, SLOT(onMoved(QString,QString)));
