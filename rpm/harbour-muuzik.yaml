@@ -58,4 +58,4 @@ Files:
 
 QMakeOptions:
 - VERSION=%{version}
-- COPYRIGHT='2017-2022'
+- COPYRIGHT='2025-2026'

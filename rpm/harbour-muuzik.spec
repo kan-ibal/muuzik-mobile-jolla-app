@@ -53,7 +53,7 @@ Playlist, bookmark, biography, lyrics and art feeching
 
 %qtc_qmake5  \
     VERSION=%{version} \
-    COPYRIGHT='2017-2022'
+    COPYRIGHT='2025-2026'
 
 %qtc_make %{?_smp_mflags}
 

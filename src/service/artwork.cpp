@@ -6,6 +6,10 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QDateTime>
+#include <QSaveFile>
+#include <QStandardPaths>
+#include <QCryptographicHash>
 #include <QDebug>
 #include <QtAlgorithms>
 #include <QFuture>
@@ -17,8 +21,26 @@
 
 #include "config.h"
 #include "../app.h"
-#include  <taglib/fileref.h>
-#include  <taglib/tag.h>
+#include <taglib/taglib.h>
+#include <taglib/fileref.h>
+#include <taglib/tag.h>
+#include <taglib/mpegfile.h>
+#include <taglib/id3v2tag.h>
+#include <taglib/attachedpictureframe.h>
+#include <taglib/flacfile.h>
+#include <taglib/flacpicture.h>
+#include <taglib/mp4file.h>
+#include <taglib/mp4tag.h>
+#include <taglib/mp4coverart.h>
+#include <taglib/vorbisfile.h>
+#include <taglib/opusfile.h>
+#include <taglib/xiphcomment.h>
+#include <taglib/wavfile.h>
+#include <taglib/aifffile.h>
+#include <taglib/asffile.h>
+#include <taglib/asftag.h>
+#include <taglib/asfattribute.h>
+#include <taglib/asfpicture.h>
 
 #include "../vi18n/vi18n.h"
 #include "../virtualfiles/VFservice.h"
@@ -102,16 +124,15 @@ void ArtWorkService::getArtAsync(const QString &vurl) {
   * @return url vers la miniature
   **/
 QString ArtWorkService::getArt(const QString &vurl) {
-    QMutexLocker locker(&cacheMutex);
-    //    qDebug() << "sur ArtWorkService::getArt " << vurl;
-
-    // cherche dans le cache
-    if(cache.contains(vurl)) {
-        return cache.value(vurl);
+    {
+        QMutexLocker locker(&cacheMutex);
+        if(cache.contains(vurl)) {
+            return cache.value(vurl);
+        }
     }
 
     if(VFI.exist(vurl) == false) {
-        return QString::null;
+        return QString();
     }
 
     //-------------------------------------------
@@ -119,28 +140,32 @@ QString ArtWorkService::getArt(const QString &vurl) {
     if(VFI.isDirectory(vurl)) {
         // on recherche une miniature dans le repertoire
         QString path = fromDirectory(vurl);
-        if(path.isNull()==false) {
+        if(!path.isEmpty()) {
+            QMutexLocker locker(&cacheMutex);
             cache.insert(vurl,path);
             return path;
         }
 
-        // on cherche recup le premier fichier audio qui a put être indexe
-        QList<VFInfo *> l = VFI.getSynch(vurl, "\\.(mp3|flac)$", VFService::VFType::FILE);
+        // on cherche une pochette embarquee dans les fichiers audio du repertoire
+        QList<VFInfo *> l = VFI.getSynch(vurl, VFService::FILTERAUDIO, VFService::VFType::FILE);
         if(l.length()==0) {
-            //            delete(l);
-
-            // pas d'audio
+            QMutexLocker locker(&cacheMutex);
             cache.insert(vurl,"");
-            return QString::null;
+            return QString();
         }
 
         QString audio_path = l.at(0)->getVUrl();
-        path = fromTag(audio_path);
+        foreach (VFInfo *info, l) {
+            path = fromTag(info->getVUrl());
+            if (!path.isEmpty()) {
+                break;
+            }
+        }
         qDeleteAll(l);
-        //        delete(l);
 
         // trouve par fichier audio ???
-        if(path.isNull()==false) {
+        if(!path.isEmpty()) {
+            QMutexLocker locker(&cacheMutex);
             cache.insert(vurl,path);
             return path;
         }
@@ -148,19 +173,21 @@ QString ArtWorkService::getArt(const QString &vurl) {
         // on a rien on lance une recherche net
         emit ArtWorkService::getInstance().doNetSearch(audio_path);
 
-        return QString::null;
+        return QString();
     }
 
     //-------------------------------------------
     // c'est un fichier audio direct
     QString path = fromTag(vurl);
-    if(path.isNull()==false) {
+    if(!path.isEmpty()) {
+        QMutexLocker locker(&cacheMutex);
         cache.insert(vurl,path);
         return path;
     }
 
     path = fromDirectory(VFI.getParentVUrl(vurl));
-    if(path.isNull()==false) {
+    if(!path.isEmpty()) {
+        QMutexLocker locker(&cacheMutex);
         cache.insert(vurl,path);
         return path;
     }
@@ -168,7 +195,7 @@ QString ArtWorkService::getArt(const QString &vurl) {
     // on a rien on lance une recherche net
     emit ArtWorkService::getInstance().doNetSearch(vurl);
 
-    return QString::null;
+    return QString();
 }
 
 /**
@@ -221,40 +248,312 @@ QString ArtWorkService::fromDirectory(const QString &vurl) {
     return QString::null;
 }
 
+namespace {
+
+QString detectImageExtension(const TagLib::ByteVector &data, const QString &mimeHint) {
+    const unsigned int sz = data.size();
+    if (sz >= 4 &&
+        static_cast<unsigned char>(data[0]) == 0x89 &&
+        data[1] == 'P' && data[2] == 'N' && data[3] == 'G') {
+        return QStringLiteral("png");
+    }
+    if (sz >= 3 &&
+        static_cast<unsigned char>(data[0]) == 0xFF &&
+        static_cast<unsigned char>(data[1]) == 0xD8 &&
+        static_cast<unsigned char>(data[2]) == 0xFF) {
+        return QStringLiteral("jpg");
+    }
+    if (sz >= 4 &&
+        data[0] == 'G' && data[1] == 'I' && data[2] == 'F' && data[3] == '8') {
+        return QStringLiteral("gif");
+    }
+    if (sz >= 12 &&
+        data[0] == 'R' && data[1] == 'I' && data[2] == 'F' && data[3] == 'F' &&
+        data[8] == 'W' && data[9] == 'E' && data[10] == 'B' && data[11] == 'P') {
+        return QStringLiteral("webp");
+    }
+    if (sz >= 2 && data[0] == 'B' && data[1] == 'M') {
+        return QStringLiteral("bmp");
+    }
+
+    QString lower = mimeHint.toLower();
+    if (lower.contains(QStringLiteral("png"))) {
+        return QStringLiteral("png");
+    }
+    if (lower.contains(QStringLiteral("gif"))) {
+        return QStringLiteral("gif");
+    }
+    if (lower.contains(QStringLiteral("webp"))) {
+        return QStringLiteral("webp");
+    }
+    if (lower.contains(QStringLiteral("bmp"))) {
+        return QStringLiteral("bmp");
+    }
+    return QStringLiteral("jpg");
+}
+
+bool extractFromId3v2(TagLib::ID3v2::Tag *tag, TagLib::ByteVector &outData, QString &outMime) {
+    if (!tag) {
+        return false;
+    }
+    const TagLib::ID3v2::FrameList frames = tag->frameList("APIC");
+    if (frames.isEmpty()) {
+        return false;
+    }
+
+    TagLib::ID3v2::AttachedPictureFrame *fallback = 0;
+    for (TagLib::ID3v2::FrameList::ConstIterator it = frames.begin(); it != frames.end(); ++it) {
+        TagLib::ID3v2::AttachedPictureFrame *pic = dynamic_cast<TagLib::ID3v2::AttachedPictureFrame *>(*it);
+        if (!pic || pic->picture().isEmpty()) {
+            continue;
+        }
+        if (pic->type() == TagLib::ID3v2::AttachedPictureFrame::FrontCover) {
+            outData = pic->picture();
+            outMime = QString::fromUtf8(pic->mimeType().toCString(true));
+            return true;
+        }
+        if (!fallback) {
+            fallback = pic;
+        }
+    }
+
+    if (fallback) {
+        outData = fallback->picture();
+        outMime = QString::fromUtf8(fallback->mimeType().toCString(true));
+        return true;
+    }
+    return false;
+}
+
+bool extractFromFlacPictures(const TagLib::List<TagLib::FLAC::Picture *> &pics, TagLib::ByteVector &outData, QString &outMime) {
+    if (pics.isEmpty()) {
+        return false;
+    }
+
+    TagLib::FLAC::Picture *fallback = 0;
+    for (TagLib::List<TagLib::FLAC::Picture *>::ConstIterator it = pics.begin(); it != pics.end(); ++it) {
+        TagLib::FLAC::Picture *pic = *it;
+        if (!pic || pic->data().isEmpty()) {
+            continue;
+        }
+        if (pic->type() == TagLib::FLAC::Picture::FrontCover) {
+            outData = pic->data();
+            outMime = QString::fromUtf8(pic->mimeType().toCString(true));
+            return true;
+        }
+        if (!fallback) {
+            fallback = pic;
+        }
+    }
+
+    if (fallback) {
+        outData = fallback->data();
+        outMime = QString::fromUtf8(fallback->mimeType().toCString(true));
+        return true;
+    }
+    return false;
+}
+
+bool extractEmbeddedArtwork(TagLib::File *file, TagLib::ByteVector &outData, QString &outMime) {
+    if (!file) {
+        return false;
+    }
+
+    if (TagLib::MPEG::File *mpeg = dynamic_cast<TagLib::MPEG::File *>(file)) {
+        if (extractFromId3v2(mpeg->ID3v2Tag(), outData, outMime)) {
+            return true;
+        }
+    }
+
+    if (TagLib::FLAC::File *flac = dynamic_cast<TagLib::FLAC::File *>(file)) {
+        if (extractFromFlacPictures(flac->pictureList(), outData, outMime)) {
+            return true;
+        }
+        if (extractFromId3v2(flac->ID3v2Tag(), outData, outMime)) {
+            return true;
+        }
+    }
+
+    if (TagLib::MP4::File *mp4 = dynamic_cast<TagLib::MP4::File *>(file)) {
+        TagLib::MP4::Tag *mp4Tag = mp4->tag();
+        if (mp4Tag) {
+            TagLib::MP4::CoverArtList covers;
+#if (TAGLIB_MAJOR_VERSION > 1) || (TAGLIB_MAJOR_VERSION == 1 && TAGLIB_MINOR_VERSION >= 12)
+            if (mp4Tag->contains("covr")) {
+                covers = mp4Tag->item("covr").toCoverArtList();
+            }
+#else
+            const TagLib::MP4::ItemListMap &items = mp4Tag->itemListMap();
+            if (items.contains("covr")) {
+                covers = items["covr"].toCoverArtList();
+            }
+#endif
+            for (TagLib::MP4::CoverArtList::ConstIterator it = covers.begin(); it != covers.end(); ++it) {
+                if (!it->data().isEmpty()) {
+                    outData = it->data();
+                    switch (it->format()) {
+                    case TagLib::MP4::CoverArt::PNG:
+                        outMime = QStringLiteral("image/png");
+                        break;
+                    case TagLib::MP4::CoverArt::GIF:
+                        outMime = QStringLiteral("image/gif");
+                        break;
+                    case TagLib::MP4::CoverArt::BMP:
+                        outMime = QStringLiteral("image/bmp");
+                        break;
+                    default:
+                        outMime = QStringLiteral("image/jpeg");
+                        break;
+                    }
+                    return true;
+                }
+            }
+        }
+    }
+
+#if (TAGLIB_MAJOR_VERSION > 1) || (TAGLIB_MAJOR_VERSION == 1 && TAGLIB_MINOR_VERSION >= 11)
+    if (TagLib::Ogg::Vorbis::File *vorbis = dynamic_cast<TagLib::Ogg::Vorbis::File *>(file)) {
+        if (vorbis->tag() && extractFromFlacPictures(vorbis->tag()->pictureList(), outData, outMime)) {
+            return true;
+        }
+    }
+
+    if (TagLib::Ogg::Opus::File *opus = dynamic_cast<TagLib::Ogg::Opus::File *>(file)) {
+        if (opus->tag() && extractFromFlacPictures(opus->tag()->pictureList(), outData, outMime)) {
+            return true;
+        }
+    }
+#endif
+
+    if (TagLib::RIFF::WAV::File *wav = dynamic_cast<TagLib::RIFF::WAV::File *>(file)) {
+        if (extractFromId3v2(wav->ID3v2Tag(), outData, outMime)) {
+            return true;
+        }
+    }
+
+    if (TagLib::RIFF::AIFF::File *aiff = dynamic_cast<TagLib::RIFF::AIFF::File *>(file)) {
+        if (extractFromId3v2(aiff->tag(), outData, outMime)) {
+            return true;
+        }
+    }
+
+    if (TagLib::ASF::File *asf = dynamic_cast<TagLib::ASF::File *>(file)) {
+        TagLib::ASF::Tag *asfTag = asf->tag();
+        if (asfTag) {
+            TagLib::ASF::AttributeList attrs;
+#if (TAGLIB_MAJOR_VERSION > 1) || (TAGLIB_MAJOR_VERSION == 1 && TAGLIB_MINOR_VERSION >= 12)
+            if (asfTag->contains("WM/Picture")) {
+                attrs = asfTag->attribute("WM/Picture");
+            }
+#else
+            const TagLib::ASF::AttributeListMap &attrMap = asfTag->attributeListMap();
+            if (attrMap.contains("WM/Picture")) {
+                attrs = attrMap["WM/Picture"];
+            }
+#endif
+            for (TagLib::ASF::AttributeList::ConstIterator it = attrs.begin(); it != attrs.end(); ++it) {
+                TagLib::ASF::Picture pic = it->toPicture();
+                if (pic.isValid() && !pic.picture().isEmpty()) {
+                    outData = pic.picture();
+                    outMime = QString::fromUtf8(pic.mimeType().toCString(true));
+                    return true;
+                }
+            }
+        }
+    }
+
+    return false;
+}
+
+} // namespace
+
 /**
  * @brief getFromTag
  * @param vurl
  * @return path ou QString:null
  */
 QString ArtWorkService::fromTag(const QString &vurl) {
+    QString filePath = VFI.getPathFromVUrl(vurl);
+    if (filePath.isEmpty()) {
+        return QString();
+    }
 
-    TagLib::FileRef fr(VFI.getPathFromVUrl(vurl).toUtf8().constData() );
-    if( fr.isNull() == false) {
+    QFileInfo srcInfo(filePath);
+    if (!srcInfo.exists() || !srcInfo.isReadable()) {
+        return QString();
+    }
 
-        QString album(fr.tag()->album().toCString());
-        QString artiste(fr.tag()->artist().toCString());
-
-        if(album.length()>0 && artiste.length()>0) {
-            QString url(
-                        QDir::homePath()+"/.cache/media-art/album-" +
-                        QCryptographicHash::hash(
-                            artiste.toLower().normalized(QString::NormalizationForm_KD).toUtf8(),
-                            QCryptographicHash::Md5).toHex()+
-                        "-" +
-                        QCryptographicHash::hash(
-                            album.toLower().normalized(QString::NormalizationForm_KD).toUtf8(),
-                            QCryptographicHash::Md5).toHex()+
-                        ".jpeg"
-                        );
-
-            QFileInfo info(url);
-            if(info.exists() && info.isReadable()) {
-                return url;
+    QString cacheBaseDir = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
+    if (!cacheBaseDir.isEmpty()) {
+        cacheBaseDir += QStringLiteral("/art");
+        QString key = filePath + QStringLiteral("|") + QString::number(srcInfo.size()) +
+                      QStringLiteral("|") + QString::number(srcInfo.lastModified().toMSecsSinceEpoch());
+        QString hash = QString::fromLatin1(QCryptographicHash::hash(key.toUtf8(), QCryptographicHash::Md5).toHex());
+        const char *exts[] = {"jpg", "png", "gif", "webp", "bmp"};
+        for (size_t i = 0; i < sizeof(exts) / sizeof(exts[0]); ++i) {
+            QString candidate = cacheBaseDir + QStringLiteral("/") + hash + QStringLiteral(".") + QLatin1String(exts[i]);
+            QFileInfo cachedInfo(candidate);
+            if (cachedInfo.exists() && cachedInfo.isReadable() && cachedInfo.size() > 0) {
+                return candidate;
             }
         }
     }
 
-    return QString::null;
+    TagLib::FileRef fr(QFile::encodeName(filePath).constData());
+    if (fr.isNull() == false) {
+        TagLib::ByteVector imgData;
+        QString mimeHint;
+        if (extractEmbeddedArtwork(fr.file(), imgData, mimeHint) && !imgData.isEmpty() && !cacheBaseDir.isEmpty()) {
+            QDir dir;
+            if (dir.mkpath(cacheBaseDir)) {
+                QString key = filePath + QStringLiteral("|") + QString::number(srcInfo.size()) +
+                              QStringLiteral("|") + QString::number(srcInfo.lastModified().toMSecsSinceEpoch());
+                QString hash = QString::fromLatin1(QCryptographicHash::hash(key.toUtf8(), QCryptographicHash::Md5).toHex());
+                QString ext = detectImageExtension(imgData, mimeHint);
+                QString targetPath = cacheBaseDir + QStringLiteral("/") + hash + QStringLiteral(".") + ext;
+
+                QFileInfo existingInfo(targetPath);
+                if (existingInfo.exists() && existingInfo.size() > 0) {
+                    return targetPath;
+                }
+
+                QSaveFile outFile(targetPath);
+                if (outFile.open(QIODevice::WriteOnly)) {
+                    qint64 written = outFile.write(imgData.data(), static_cast<qint64>(imgData.size()));
+                    if (written == static_cast<qint64>(imgData.size()) && outFile.commit()) {
+                        return targetPath;
+                    }
+                    outFile.cancelWriting();
+                }
+            }
+        }
+
+        if (fr.tag() != NULL) {
+            QString album = QString::fromUtf8(fr.tag()->album().toCString(true));
+            QString artiste = QString::fromUtf8(fr.tag()->artist().toCString(true));
+
+            if (album.length() > 0 && artiste.length() > 0) {
+                QString url(
+                            QDir::homePath() + "/.cache/media-art/album-" +
+                            QCryptographicHash::hash(
+                                artiste.toLower().normalized(QString::NormalizationForm_KD).toUtf8(),
+                                QCryptographicHash::Md5).toHex() +
+                            "-" +
+                            QCryptographicHash::hash(
+                                album.toLower().normalized(QString::NormalizationForm_KD).toUtf8(),
+                                QCryptographicHash::Md5).toHex() +
+                            ".jpeg"
+                            );
+
+                QFileInfo info(url);
+                if (info.exists() && info.isReadable()) {
+                    return url;
+                }
+            }
+        }
+    }
+
+    return QString();
 }
 
 /**
@@ -300,13 +599,13 @@ void ArtWorkService::launchNetImpl(const QString &vurl) {
         return;
     }
 
-    TagLib::FileRef fr(path.toUtf8().constData() );
-    if( fr.isNull() ) {
+    TagLib::FileRef fr(QFile::encodeName(path).constData() );
+    if( fr.isNull() || fr.tag() == NULL ) {
         return;
     }
 
-    QString album = QString(fr.tag()->album().toCString());
-    QString artiste =QString(fr.tag()->artist().toCString());
+    QString album = QString::fromUtf8(fr.tag()->album().toCString(true));
+    QString artiste = QString::fromUtf8(fr.tag()->artist().toCString(true));
     if(artiste.length()==0 || album.length()==0 ) {
         return;
     }
