@@ -552,7 +552,13 @@ QString playlistService::getPlaylistLocation() {
         targetPath = QDir::cleanPath(QDir::homePath() + "/Music/playlists");
     } else if(locMode == PLAYLIST_LOCATION_SDCARD) {
         if(SdcardLocator::getInstance().isPresent()) {
-            QString sdMusic = configService::getInstance().getNomsdcard();
+            QString sdMusic = configService::getInstance().getNomsdcard().trimmed();
+            while (sdMusic.startsWith('/')) {
+                sdMusic.remove(0, 1);
+            }
+            while (sdMusic.endsWith('/')) {
+                sdMusic.chop(1);
+            }
             if(sdMusic.isEmpty()) {
                 sdMusic = QStringLiteral("Music");
             }

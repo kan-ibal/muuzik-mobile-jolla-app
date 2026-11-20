@@ -285,6 +285,16 @@ void configService::setPasDecache(bool v) {
  * @param v
  */
 void configService::setNomsdcard(QString v) {
+    v = v.trimmed();
+    while (v.startsWith('/')) {
+        v.remove(0, 1);
+    }
+    while (v.endsWith('/')) {
+        v.chop(1);
+    }
+    if (v.isEmpty()) {
+        v = QStringLiteral(NOMSDCARD_DEF);
+    }
     if(nomsdcard.compare(v)==0) {
         return;
     }

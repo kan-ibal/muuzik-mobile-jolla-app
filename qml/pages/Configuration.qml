@@ -10,6 +10,20 @@ Page {
         ConfigService.parDefaut();
     }
 
+    function sdcardMusicDir(val) {
+        if (!val) {
+            return "Music";
+        }
+        val = val.replace(/^[\s\/]+|[\s\/]+$/g, "");
+        return val.length > 0 ? val : "Music";
+    }
+
+    onStatusChanged: {
+        if (status === PageStatus.Deactivating && sdcardDirField.focus) {
+            sdcardDirField.focus = false;
+        }
+    }
+
     SilicaFlickable {
         contentWidth: parent.width
         contentHeight: c.height
@@ -47,6 +61,7 @@ Page {
             SectionHeader { text:  vi18n.get("options.sdcard") }
 
             TextField {
+                id: sdcardDirField
                 //    focus: true
                 enabled: SdcardLocator.present
                 text: ConfigService.nomsdcard
@@ -78,8 +93,13 @@ Page {
                     MenuItem {
                         enabled: SdcardLocator.present
                         text: SdcardLocator.present
-                              ? vi18n.get("options.playlist.location.sdcard").arg(ConfigService.nomsdcard.length > 0 ? ConfigService.nomsdcard : "Music")
-                              : vi18n.get("options.playlist.location.sdcard.none").arg(ConfigService.nomsdcard.length > 0 ? ConfigService.nomsdcard : "Music")
+                              ? vi18n.get("options.playlist.location.sdcard").arg(page.sdcardMusicDir(sdcardDirField.text))
+                              : vi18n.get("options.playlist.location.sdcard.none").arg(page.sdcardMusicDir(sdcardDirField.text))
+                    }
+                }
+                onClicked: {
+                    if (sdcardDirField.focus) {
+                        sdcardDirField.focus = false;
                     }
                 }
                 onCurrentIndexChanged: {
@@ -107,6 +127,11 @@ Page {
 
             Connections {
                 target: ConfigService
+                onNomsdcardChanged: {
+                    if (!sdcardDirField.focus && sdcardDirField.text !== ConfigService.nomsdcard) {
+                        sdcardDirField.text = ConfigService.nomsdcard;
+                    }
+                }
                 onPlaylistLocationChanged: {
                     if (playlistLocationBox.currentIndex !== ConfigService.playlistLocation) {
                         playlistLocationBox.currentIndex = ConfigService.playlistLocation;
