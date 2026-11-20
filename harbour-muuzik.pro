@@ -136,7 +136,7 @@ DISTFILES += \
     qml/dlg/* \
     qml/cover/* \
     qml/hints/* \
-    qml/components/lecteur/* \
-    qml/js/affichage.js \
+    qml/components/player/* \
+    qml/js/display.js \
     qml/pages/InfoMedia.qml \
     qml/pages/InfoRep.qml

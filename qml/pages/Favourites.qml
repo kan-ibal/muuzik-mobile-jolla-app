@@ -10,13 +10,13 @@ Page {
 
     //-----------------------------------------
     function openUri(v) {
-        pageStack.push(Qt.resolvedUrl("Navigateur.qml"), {uri:v})
+        pageStack.push(Qt.resolvedUrl("Browser.qml"), {uri:v})
     }
 
     //----------------------------------
     function ouvrir(url) {
         playerService.replace([url]);
-        pageStack.push(Qt.resolvedUrl("ListeLecture.qml"));
+        pageStack.push(Qt.resolvedUrl("Playlist.qml"));
     }
 
     //----------------------------------
@@ -178,7 +178,7 @@ Page {
                 text:  vi18n.get("menu.enlecture")
                 visible: page.orientation === Orientation.Portrait || page.orientation === Orientation.PortraitInverted
                 onClicked: {
-                    pageStack.push(Qt.resolvedUrl("ListeLecture.qml"));
+                    pageStack.push(Qt.resolvedUrl("Playlist.qml"));
                 }
             }
         }

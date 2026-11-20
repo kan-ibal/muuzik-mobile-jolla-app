@@ -11,6 +11,7 @@
 
 #include "../vi18n/vi18n.h"
 #include "../sdcardlocator/sdcardlocator.h"
+#include "../virtualfiles/VFservice.h"
 
 #include <nemonotifications-qt5/notification.h>
 
@@ -52,6 +53,8 @@ configService::configService(QObject *parent)
     modeHistorique = settings.value(HISTORIQUE_MODE,HISTORIQUE_MODE_DEF).toInt();
     ordreFavoris = settings.value(FAVORIS_ORDRE,FAVORIS_ORDRE_DEF).toInt();
     nbRecent = settings.value(C_RECENT_MAX_NB,C_RECENT_MAX_NB_DEF).toInt();
+    playlistLocation = settings.value(PLAYLIST_LOCATION, PLAYLIST_LOCATION_DEF).toUInt();
+    playlistFormat = settings.value(PLAYLIST_FORMAT, PLAYLIST_FORMAT_DEF).toUInt();
 
     source.append(QString(QDir::homePath()+"/Music"));
     source.append(QString(QDir::homePath()+"/android_storage/Music"));
@@ -286,11 +289,18 @@ void configService::setNomsdcard(QString v) {
         return;
     }
 
+    if(!sdcard.isEmpty()) {
+        source.removeAll(QString(sdcard + "/" + nomsdcard));
+    }
+
     nomsdcard=v;
     settings.setValue(NOMSDCARD, v);
     settings.sync();
     setModif();
     initSDcard();
+    VFI.setSources(source);
+    emit nomsdcardChanged();
+    emit sourceChanged();
 }
 
 /**
@@ -386,6 +396,28 @@ void configService::setNbRecent(quint16 v) {
     emit nbRecentChanged();
 }
 
+void configService::setPlaylistLocation(quint16 v) {
+    if(playlistLocation == v) {
+        return;
+    }
+    playlistLocation = v;
+    settings.setValue(PLAYLIST_LOCATION, v);
+    settings.sync();
+    setModif();
+    emit playlistLocationChanged();
+}
+
+void configService::setPlaylistFormat(quint16 v) {
+    if(playlistFormat == v) {
+        return;
+    }
+    playlistFormat = v;
+    settings.setValue(PLAYLIST_FORMAT, v);
+    settings.sync();
+    setModif();
+    emit playlistFormatChanged();
+}
+
 /**
  * @brief recharge la valeur par defaut
  */
@@ -414,6 +446,8 @@ void configService::parDefaut() {
     settings.setValue(HISTORIQUE_MODE,HISTORIQUE_MODE_DEF);
     settings.setValue(FAVORIS_ORDRE,FAVORIS_ORDRE_DEF);
     settings.setValue(C_RECENT_MAX_NB,C_RECENT_MAX_NB_DEF);
+    settings.setValue(PLAYLIST_LOCATION, PLAYLIST_LOCATION_DEF);
+    settings.setValue(PLAYLIST_FORMAT, PLAYLIST_FORMAT_DEF);
 
     settings.sync();
 
@@ -436,6 +470,8 @@ void configService::parDefaut() {
     emit modeHistoriqueChanged();
     emit ordreFavorisChanged();
     emit nbRecentChanged();
+    emit playlistLocationChanged();
+    emit playlistFormatChanged();
 }
 
 /**
@@ -497,6 +533,8 @@ void configService::initialisation() {
     modeHistorique=HISTORIQUE_MODE_DEF;
     ordreFavoris=FAVORIS_ORDRE_DEF;
     nbRecent = C_RECENT_MAX_NB_DEF;
+    playlistLocation = PLAYLIST_LOCATION_DEF;
+    playlistFormat = PLAYLIST_FORMAT_DEF;
     lastfm=false;
 }
 

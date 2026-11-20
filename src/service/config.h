@@ -84,6 +84,17 @@ using namespace std;
 #define C_RECENT_MAX_NB "recent/nb"
 #define C_RECENT_MAX_NB_DEF 50
 
+#define PLAYLIST_LOCATION "playlist/location"
+#define PLAYLIST_LOCATION_HOME 0
+#define PLAYLIST_LOCATION_MUSIC 1
+#define PLAYLIST_LOCATION_SDCARD 2
+#define PLAYLIST_LOCATION_DEF PLAYLIST_LOCATION_HOME
+
+#define PLAYLIST_FORMAT "playlist/format"
+#define PLAYLIST_FORMAT_JOLLA 0
+#define PLAYLIST_FORMAT_UNPLAYER 1
+#define PLAYLIST_FORMAT_DEF PLAYLIST_FORMAT_JOLLA
+
 #define CONFIGSERVICE_QML_NAME "ConfigService"
 
 class configService : public QObject {
@@ -104,7 +115,7 @@ class configService : public QObject {
     Q_PROPERTY(bool lastfm READ getLastfm WRITE setLastfm NOTIFY lastfmChanged  )
     Q_PROPERTY(bool paroledirect READ getParoleDirect WRITE setParoleDirect NOTIFY paroleChanged )
     Q_PROPERTY(bool paroleexterne READ getParoleExterne() WRITE setParoleExterne NOTIFY paroleExterneChanged )
-    Q_PROPERTY(QString nomsdcard READ getNomsdcard CONSTANT )
+    Q_PROPERTY(QString nomsdcard READ getNomsdcard NOTIFY nomsdcardChanged )
     Q_PROPERTY(bool pasdecache READ getPasDecache WRITE setPasDecache NOTIFY pasdecacheChanged )
     Q_PROPERTY(bool pochette READ getPochette WRITE setPochette NOTIFY pochetteChanged )
     Q_PROPERTY(bool pochetteWifi READ getPochetteWifi WRITE setPochetteWifi NOTIFY pochetteWifiChanged )
@@ -114,6 +125,8 @@ class configService : public QObject {
     Q_PROPERTY(quint16 ordreFavoris READ getOrdreFavoris WRITE setOrdreFavoris NOTIFY ordreFavorisChanged ) 
 
     Q_PROPERTY(quint16 nbRecent READ getNbRecent WRITE setNbRecent NOTIFY nbRecentChanged )
+    Q_PROPERTY(quint16 playlistLocation READ getPlaylistLocation WRITE setPlaylistLocation NOTIFY playlistLocationChanged )
+    Q_PROPERTY(quint16 playlistFormat READ getPlaylistFormat WRITE setPlaylistFormat NOTIFY playlistFormatChanged )
 
 
 public:
@@ -235,6 +248,14 @@ public:
     quint16 getNbRecent() const {return nbRecent; }
     void setNbRecent(quint16 v);
 
+    // playlist location (0: ~/Playlist, 1: ~/Music/playlists, 2: sdcard/Music/playlists)
+    quint16 getPlaylistLocation() const { return playlistLocation; }
+    void setPlaylistLocation(quint16 v);
+
+    // playlist write format (0: Jolla Media player file://, 1: Unplayer /path)
+    quint16 getPlaylistFormat() const { return playlistFormat; }
+    void setPlaylistFormat(quint16 v);
+
 
     /**
      * @brief vrai si le rep sous sdcard existe
@@ -287,6 +308,9 @@ private :
     quint16 ordreFavoris;
 
     quint16 nbRecent;   // nombre maximal d'album a afficher dans l'onglet recent
+
+    quint16 playlistLocation;
+    quint16 playlistFormat;
 
     QString nomsdcard; // le rep our les fichiers audio sur la sdcard
 
@@ -347,6 +371,9 @@ signals:
     void ordreFavorisChanged();
 
     void nbRecentChanged();
+    void nomsdcardChanged();
+    void playlistLocationChanged();
+    void playlistFormatChanged();
 };
 
 //Q_DECLARE_METATYPE(configService::ActionContectMenu)

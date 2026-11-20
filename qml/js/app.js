@@ -112,7 +112,7 @@ var fastChecksum=function(s) {
   *
   */
 var ouvrir=function (v) {
-    pageStack.push(Qt.resolvedUrl("../pages/Navigateur.qml"), {adresse:v})
+    pageStack.push(Qt.resolvedUrl("../pages/Browser.qml"), {adresse:v})
 }
 
 /**
@@ -120,7 +120,7 @@ var ouvrir=function (v) {
   */
 var ecouter=function (v) {
     playerService.replace([v]);
-    pageStack.push(Qt.resolvedUrl("../pages/ListeLecture.qml"));
+    pageStack.push(Qt.resolvedUrl("../pages/Playlist.qml"));
 }
 
 /**

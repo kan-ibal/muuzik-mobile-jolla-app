@@ -35,7 +35,7 @@ Page {
             icone:"image://theme/icon-m-folder"
             t:"topmenu.navigateur"
             d:"topmenu.navigateur.desc"
-            c:"Navigateur.qml"
+            c:"Browser.qml"
         }
         ListElement {
             icone:"image://theme/icon-m-menu"
@@ -48,14 +48,14 @@ Page {
             icone:"image://theme/icon-m-favorite"
             t:"topmenu.favoris"
             d:"topmenu.favoris.desc"
-            c:"Favoris.qml"
+            c:"Favourites.qml"
         }
 
         ListElement {
             icone:"image://muuzik/img/historique"
             t:"topmenu.historique"
             d:"topmenu.historique.desc"
-            c:"Historique.qml"
+            c:"History.qml"
         }
 
         ListElement {
@@ -82,7 +82,7 @@ Page {
             icone:"image://muuzik/img/son"
             t:"topmenu.enlecture"
             d:"topmenu.enlecture.desc"
-            c:"ListeLecture.qml"
+            c:"Playlist.qml"
         }
     }
 

@@ -16,12 +16,12 @@ Page {
 
     //-----------------------------------------
     function ajouter(v) {
-        pageStack.push(Qt.resolvedUrl("AjouterA.qml"), {url:v,aulecteur:false});
+        pageStack.push(Qt.resolvedUrl("AddA.qml"), {url:v,aulecteur:false});
     }
 
     //-----------------------------------------
     function sauver(v) {
-        pageStack.push(Qt.resolvedUrl("Sauvegarder.qml"), {url:v});
+        pageStack.push(Qt.resolvedUrl("Save.qml"), {url:v});
     }
 
     //-----------------------------------------

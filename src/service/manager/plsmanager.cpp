@@ -2,10 +2,13 @@
 #include <QTextStream>
 #include <QDir>
 #include <QFile>
+#include <QFileInfo>
+#include <QUrl>
 #include <qregularexpression.h>
 #include <QHash>
 #include <QDebug>
 
+#include "../config.h"
 #include "../metadataservice.h"
 
 #include "../../virtualfiles/VFservice.h"
@@ -19,21 +22,48 @@ plsManager::plsManager(QObject *parent) : QObject(parent) {
  * @param path full absolute path to the playlist,if exit, override
  * @return true if list writen
  */
+namespace {
+struct PlsEntry {
+    QString filePath;
+    QString title;
+    quint64 length;
+};
+}
+
 bool plsManager::marshaller(const QList<MetaData *> list ,const QString &path ) {
 
+    QList<PlsEntry> entries;
+    foreach (MetaData *s, list) {
+        if (!s) {
+            continue;
+        }
+        const QString filePath = VFI.getPathFromVUrl(s->getChemin());
+        if (filePath.isEmpty()) {
+            continue;
+        }
+        PlsEntry entry;
+        entry.filePath = filePath;
+        entry.title = s->getTitre();
+        entry.length = s->getDuree();
+        entries.append(entry);
+    }
+
+    const bool useFileScheme = (configService::getInstance().getPlaylistFormat() != PLAYLIST_FORMAT_UNPLAYER);
+
     QFile f(path);
-    if( f.open(QIODevice::ReadWrite | QIODevice::Truncate | QIODevice::Text)) {
+    if( f.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text)) {
 
         QTextStream stream(&f);
+        stream.setCodec("UTF-8");
 
         stream << "[playlist]" << "\n";
-        stream << "NumberOfEntries=" << list.length() << "\n";
+        stream << "NumberOfEntries=" << entries.length() << "\n";
 
         int i=1;
-        foreach (MetaData *s, list) {
-            stream << "File" << i << "=file://" << VFI.getPathFromVUrl(s->getChemin()) << "\n";
-            stream << "Title" << i << "=" << s->getTitre() << "\n";
-            stream << "Length" << i << "=" << s->getDuree() << "\n";
+        foreach (const PlsEntry &e, entries) {
+            stream << "File" << i << "=" << (useFileScheme ? QStringLiteral("file://") : QString()) << e.filePath << "\n";
+            stream << "Title" << i << "=" << e.title << "\n";
+            stream << "Length" << i << "=" << e.length << "\n";
             i++;
         }
         stream  << endl;
@@ -61,29 +91,62 @@ Pls *plsManager::unmarshaller(const QString &path ) {
     QHash<QString,QString> hash;
 
     QFile f(path);
-    if( f.open(QIODevice::ReadOnly)) {
+    if( f.open(QIODevice::ReadOnly | QIODevice::Text)) {
         QTextStream in(&f);
+        in.setCodec("UTF-8");
         while(!in.atEnd()) {
-            QStringList l = in.readLine().split('=');
-            if(l.length()<2) {
+            const QString line = in.readLine();
+            const int eqIdx = line.indexOf('=');
+            if(eqIdx <= 0) {
                 continue;
             }
-            hash.insert(l.at(0),l.at(1));
+            hash.insert(line.left(eqIdx).trimmed().toLower(), line.mid(eqIdx + 1).trimmed());
         }
 
         f.close();
     }
 
-    // parse les valeurs
-    quint64 nb=1; // failsafe à 512
+    const QDir playlistDir = QFileInfo(path).absoluteDir();
+    const quint64 declaredCount = hash.value(QStringLiteral("numberofentries")).toULongLong();
 
-    while( hash.contains(QString("File"+QString::number((nb))) ) && nb < 512 ) {
+    // parse entries, automatically detecting file:///... (Jolla Media player) and /... (Unplayer) formats
+    quint64 nb=1; // failsafe à 10000
+
+    while( (hash.contains(QString("file"+QString::number(nb))) || nb <= declaredCount) && nb < 10000 ) {
+        const QString fileKey = QString("file" + QString::number(nb));
+        if(!hash.contains(fileKey)) {
+            nb++;
+            continue;
+        }
         try {
-            QString p = hash.value(QString("File"+ QString::number((nb)) ));
-            QString u = VFI.getVUrl( p.remove("file://") );
+            QString p = hash.value(fileKey).trimmed();
+            if(p.startsWith(QStringLiteral("file://"), Qt::CaseInsensitive)) {
+                const QString candidate = p.startsWith(QStringLiteral("file://localhost/"), Qt::CaseInsensitive)
+                        ? p.mid(16)
+                        : p.mid(7);
+                const QString decoded = QUrl::fromEncoded(p.toUtf8()).toLocalFile();
+                if(!candidate.isEmpty() && QFileInfo::exists(candidate)) {
+                    p = candidate;
+                } else if(!decoded.isEmpty() && QFileInfo::exists(decoded)) {
+                    p = decoded;
+                } else if(!decoded.isEmpty() && decoded != candidate && candidate.contains('%')) {
+                    p = decoded;
+                } else {
+                    p = candidate;
+                }
+            }
+            if(!p.isEmpty() && !QDir::isAbsolutePath(p)) {
+                p = QDir::cleanPath(playlistDir.absoluteFilePath(p));
+            }
+            QString u = VFI.getVUrl(p);
+            if((u.isEmpty() || !VFI.exist(u)) && !p.isEmpty() && QFileInfo::exists(p)) {
+                const QString canonical = QFileInfo(p).canonicalFilePath();
+                if(!canonical.isEmpty()) {
+                    u = VFI.getVUrl(canonical);
+                }
+            }
             if(VFI.exist(u)) {
-
-                quint64 t = hash.value(QString("Length"+QString::number((nb)) )).toInt();
+                quint64 t = hash.value(QString("length"+QString::number(nb))).toULongLong();
                 pls->ajouterUrl(u,t);
             }
         }catch( const std::exception & e ) {

@@ -77,18 +77,18 @@ Page {
                                                     "label": vi18n.get("playlists.sauve.label")
                                                 });
                     dialog.accepted.connect(function() {
-                        var uuid = PlaylistService.creer(dialog.valeur);
+                        var uuid = PlaylistService.create(dialog.valeur);
                         if( uuid === -1 ) {
                             return;
                         }
 
-                        PlaylistService.ecrireAsync(uuid,url);
+                        PlaylistService.writeAsync(uuid,url);
                         page.closeOnReturn = true;
                     });
                     break;
 
                 case 2 :
-                    PlaylistService.ecrireAsync(uuid,url);
+                    PlaylistService.writeAsync(uuid,url);
                     if (!pageStack.busy) {
                         pageStack.navigateBack();
                     }
@@ -173,6 +173,15 @@ Page {
     Connections {
         target: pageStack
         onBusyChanged: page.checkCloseOnReturn()
+    }
+
+    Connections {
+        target: PlaylistService
+        onListeChanged: {
+            if (!closeOnReturn) {
+                recharger();
+            }
+        }
     }
 
     Attente {

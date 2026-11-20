@@ -23,7 +23,7 @@
 
 #include <nemonotifications-qt5/notification.h>
 
-#define MAX_TAILLE_PLAYLIST 150
+#define MAX_TAILLE_PLAYLIST 250
 
 /**
  * @brief playerService::playerService

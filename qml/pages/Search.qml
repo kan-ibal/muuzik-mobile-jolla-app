@@ -15,25 +15,25 @@ Page {
     //-----------------------------------------
     function openUri(uri) {
         console.log("opening --> " + uri)
-        pageStack.push(Qt.resolvedUrl("Navigateur.qml"), { uri: uri })
+        pageStack.push(Qt.resolvedUrl("Browser.qml"), { uri: uri })
     }
 
     //-----------------------------------------
     function playUri(uri, shuffle) {
         shuffle = typeof shuffle !== "undefined" ? shuffle : true
         playerService.replace([uri], shuffle)
-        pageStack.push(Qt.resolvedUrl("ListeLecture.qml"))
+        pageStack.push(Qt.resolvedUrl("Playlist.qml"))
     }
 
     //-----------------------------------------
     function addToPlaylist(uri) {
-        pageStack.push(Qt.resolvedUrl("AjouterA.qml"), { url: uri })
+        pageStack.push(Qt.resolvedUrl("AddA.qml"), { url: uri })
     }
 
     //-----------------------------------------
     function appendAndPlay(uri) {
         playerService.add([uri], false)
-        pageStack.push(Qt.resolvedUrl("ListeLecture.qml"))
+        pageStack.push(Qt.resolvedUrl("Playlist.qml"))
     }
 
     Component {
@@ -201,7 +201,7 @@ Page {
             MenuItem {
                 text: vi18n.get("menu.enlecture")
                 onClicked: {
-                    pageStack.push(Qt.resolvedUrl("ListeLecture.qml"))
+                    pageStack.push(Qt.resolvedUrl("Playlist.qml"))
                 }
             }
         }

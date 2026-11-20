@@ -16,7 +16,7 @@ Dialog {
                              page.orientation === Orientation.PortraitInverted
 
     acceptDestinationAction: PageStackAction.Replace
-    acceptDestination: Qt.resolvedUrl("ListeLecture.qml")
+    acceptDestination: Qt.resolvedUrl("Playlist.qml")
 
     canAccept: recentService.enCours === false && albumPath.length > 0
 
@@ -74,7 +74,7 @@ Dialog {
             MenuItem {
                 text: vi18n.get("menu.enlecture")
                 onClicked: {
-                    pageStack.push(Qt.resolvedUrl("ListeLecture.qml"))
+                    pageStack.push(Qt.resolvedUrl("Playlist.qml"))
                 }
             }
 

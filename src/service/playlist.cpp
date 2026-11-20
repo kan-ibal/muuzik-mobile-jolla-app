@@ -2,6 +2,7 @@
 #include <QList>
 #include <QDir>
 #include <QFile>
+#include <QSet>
 #include <QVariant>
 #include <QStringList>
 #include <QStandardPaths>
@@ -13,12 +14,15 @@
 #include <QMetaObject>
 #include <QThread>
 
+#include "config.h"
 #include "manager/plsmanager.h"
 #include "metadataservice.h"
 
 #include "../vi18n/vi18n.h"
 #include "../virtualfiles/VFservice.h"
+#include "../sdcardlocator/sdcardlocator.h"
 
+#include <QFileInfo>
 #include <nemonotifications-qt5/notification.h>
 
 static QRegularExpression REG_PLS( "\\.pls$", QRegularExpression::CaseInsensitiveOption);
@@ -35,8 +39,10 @@ playlistService::playlistService(QObject *parent) : QObject(parent){
     connect(&VFService::getInstance(), SIGNAL(removed(QString)),this, SLOT(onRemoved(QString)));
     connect(&VFService::getInstance(), SIGNAL(moved(QString,QString)), this, SLOT(onMoved(QString,QString)));
     connect(&VFService::getInstance(), SIGNAL(renamed(QString,QString)), this, SLOT(onRenamed(QString,QString)));
+    connect(&configService::getInstance(), SIGNAL(sourceChanged()), this, SLOT(onSourceChanged()));
+    connect(&configService::getInstance(), SIGNAL(playlistLocationChanged()), this, SLOT(onSourceChanged()));
 
-    recharger();
+    refresh();
 }
 
 playlistService::~playlistService() {
@@ -68,11 +74,11 @@ void playlistService::init(QQmlContext *context,QString name) {
  * @param nom
  * @return la liste ou vide si rien (vide)
  */
-QList<MetaData *> playlistService::ouvrir(const qint64 uuid) {
+QList<MetaData *> playlistService::open(const qint64 uuid) {
 
     QList<MetaData *> list;
 
-    qint64 index = trouverIndex(uuid);
+    qint64 index = findIndex(uuid);
     if(index==-1) {
         return list;
     }
@@ -103,7 +109,7 @@ QList<MetaData *> playlistService::ouvrir(const qint64 uuid) {
   */
 QVariant playlistService::getPls(const qint64 uuid) const {
     QVariant res;
-    qint64 index = trouverIndex(uuid);
+    qint64 index = findIndex(uuid);
     if(index==-1) {
         return res;
     }
@@ -113,18 +119,18 @@ QVariant playlistService::getPls(const qint64 uuid) const {
 }
 
 /**
-  * @brief version non blocante de ouvrir
+  * @brief version non blocante de open
   * la liste sera disponible sur le signal playlistOuverte
   * @param uuid  id de la liste
   */
-bool playlistService::ouvrirAsync(const qint64 uuid) {
+bool playlistService::openAsync(const qint64 uuid) {
 
-    qint64 index = trouverIndex(uuid);
+    qint64 index = findIndex(uuid);
     if(index==-1) {
         return false;
     }
 
-    QFuture<void> f = QtConcurrent::run(doOuvrir,uuid);
+    QFuture<void> f = QtConcurrent::run(doOpen,uuid);
     return true;
 }
 
@@ -132,9 +138,9 @@ bool playlistService::ouvrirAsync(const qint64 uuid) {
  * @brief fonction app par le qfuture
  * @param uuid
  */
-void playlistService::doOuvrir(const qint64 uuid) {
+void playlistService::doOpen(const qint64 uuid) {
 
-    QList<MetaData *> list = playlistService::getInstance().ouvrir(uuid);
+    QList<MetaData *> list = playlistService::getInstance().open(uuid);
 
     QVariantList v;
     foreach (MetaData *t, list) {
@@ -148,13 +154,17 @@ void playlistService::doOuvrir(const qint64 uuid) {
   *@brief : cree une nouvelle liste (vide)
   *@return : l'uuid de la nouvelle liste
   */
-qint64 playlistService::creer(const QString &nom) {
+qint64 playlistService::create(const QString &nom) {
 
     if(nom.length() ==0) {
         return -1;
     }
 
-    //    QString dest(QDir::homePath()+"/Playlists/"+nom+".pls");
+    if(this->repPath.isEmpty() || !QDir().exists(this->repPath) || !QFileInfo(this->repPath).isWritable()) {
+        this->repPath = getPlaylistLocation();
+    }
+    QDir().mkpath(this->repPath);
+
     QString dest(this->repPath + "/"+nom+".pls");
     QFileInfo info(dest);
     if(info.exists()) {
@@ -178,7 +188,7 @@ qint64 playlistService::creer(const QString &nom) {
 
     liste.append(pls);
 
-    classerListe();
+    sortList();
 
     emit listeChanged();
 
@@ -190,8 +200,8 @@ qint64 playlistService::creer(const QString &nom) {
  * @param uuid
  * @param tracks la liste des titres
  */
-bool playlistService::ecrire(const qint64 uuid,const QList<MetaData *> tracks) {
-    qint64 index = trouverIndex(uuid);
+bool playlistService::write(const qint64 uuid,const QList<MetaData *> tracks) {
+    qint64 index = findIndex(uuid);
     if(index==-1) {
         return false;
     }
@@ -215,19 +225,19 @@ bool playlistService::ecrire(const qint64 uuid,const QList<MetaData *> tracks) {
 
     if (QThread::currentThread() != thread()) {
         QMetaObject::invokeMethod(this,
-                                  "finaliserEcriture",
+                                  "finaliseWrite",
                                   Qt::QueuedConnection,
                                   Q_ARG(qint64, uuid),
                                   Q_ARG(QStringList, chemins),
                                   Q_ARG(QVariantList, durees));
     } else {
-        finaliserEcriture(uuid, chemins, durees);
+        finaliseWrite(uuid, chemins, durees);
     }
     return true;
 }
 
-void playlistService::finaliserEcriture(const qint64 uuid, const QStringList &chemins, const QVariantList &durees) {
-    qint64 index = trouverIndex(uuid);
+void playlistService::finaliseWrite(const qint64 uuid, const QStringList &chemins, const QVariantList &durees) {
+    qint64 index = findIndex(uuid);
     if(index==-1) {
         return;
     }
@@ -245,18 +255,18 @@ void playlistService::finaliserEcriture(const qint64 uuid, const QStringList &ch
 }
 
 /**
- * @brief playlistService::ecrireASync
+ * @brief playlistService::writeAsync
  * @param uuid
  * @param tracks
  * @return
  */
-bool playlistService::ecrireAsync(const qint64 uuid,const QList<MetaData *> tracks) {
-    qint64 index = trouverIndex(uuid);
+bool playlistService::writeAsync(const qint64 uuid,const QList<MetaData *> tracks) {
+    qint64 index = findIndex(uuid);
     if(index==-1) {
         return false;
     }
 
-    QFuture<void> f = QtConcurrent::run(doEcrite,uuid,tracks);
+    QFuture<void> f = QtConcurrent::run(doWrite,uuid,tracks);
     return true;
 }
 
@@ -265,7 +275,7 @@ bool playlistService::ecrireAsync(const qint64 uuid,const QList<MetaData *> trac
  * @param uuid
  * @param tracks la liste des titres
  */
-bool playlistService::ecrireAsync(const qint64 uuid,const QList<QString> tracks) {
+bool playlistService::writeAsync(const qint64 uuid,const QList<QString> tracks) {
     QList<MetaData *> l;
     foreach (QString t, tracks) {
         MetaData *m = MetaDataService::getInstance().getMetaData(t);
@@ -274,15 +284,15 @@ bool playlistService::ecrireAsync(const qint64 uuid,const QList<QString> tracks)
         }
     }
 
-    return ecrireAsync(uuid,l);
+    return writeAsync(uuid,l);
 }
 
 /**
- * @brief doEcrite
+ * @brief doWrite
  * @param tracks
  */
-void playlistService::doEcrite(const qint64 uuid, const QList<MetaData *> tracks) {
-    playlistService::getInstance().ecrire(uuid,tracks);
+void playlistService::doWrite(const qint64 uuid, const QList<MetaData *> tracks) {
+    playlistService::getInstance().write(uuid,tracks);
 }
 
 /**
@@ -292,19 +302,19 @@ void playlistService::doEcrite(const qint64 uuid, const QList<MetaData *> tracks
   * @param uuid : la playlist
   * @param tracks : la listes des pistes
   */
-bool playlistService::ajouter(const qint64 uuid, const QList<QString> tracks) {
+bool playlistService::add(const qint64 uuid, const QList<QString> tracks) {
 
     if(tracks.length()==0) {
         return true;
     }
 
-    qint64 index = trouverIndex(uuid);
+    qint64 index = findIndex(uuid);
     if(index==-1) {
         return false;
     }
 
     // recup la liste
-    QList<MetaData *> l = ouvrir(uuid);
+    QList<MetaData *> l = open(uuid);
 
     //... ajoute les nouveaux medias
     foreach (QString str, tracks) {
@@ -315,7 +325,7 @@ bool playlistService::ajouter(const qint64 uuid, const QList<QString> tracks) {
     }
 
     // ecrit sur hdd et met à jour la pls
-    if( ecrire(uuid,l) == false ) {
+    if( write(uuid,l) == false ) {
         return false;
     }
 
@@ -326,18 +336,18 @@ bool playlistService::ajouter(const qint64 uuid, const QList<QString> tracks) {
 
     if (QThread::currentThread() != thread()) {
         QMetaObject::invokeMethod(this,
-                                  "notifierAjout",
+                                  "notifierAdd",
                                   Qt::QueuedConnection,
                                   Q_ARG(int, tracks.length()),
                                   Q_ARG(QString, plsNom));
     } else {
-        notifierAjout(tracks.length(), plsNom);
+        notifierAdd(tracks.length(), plsNom);
     }
 
     return true;
 }
 
-void playlistService::notifierAjout(int count, const QString &nom) {
+void playlistService::notifierAdd(int count, const QString &nom) {
     Notification n;
     n.setPreviewBody(VI18N.get("playlists.ajouter.a").arg(count).arg(nom));
     n.setHintValue("x-nemo-icon", "image://theme/icon-s-high-importance");
@@ -345,19 +355,19 @@ void playlistService::notifierAjout(int count, const QString &nom) {
 }
 
 /**
-  * @brief version non blocante d'ajouter
+  * @brief version non blocante d'add
   * resultat sur le signal tracksChanged
   * @param uuid
   * @param tracks la liste des titres
   * @return false sur erreur, true si lance l'ajout + signal
   */
-bool playlistService::ajouterAsync(const qint64 uuid, const QList<QString> tracks) {
-    qint64 index = trouverIndex(uuid);
+bool playlistService::addAsync(const qint64 uuid, const QList<QString> tracks) {
+    qint64 index = findIndex(uuid);
     if(index==-1) {
         return false;
     }
 
-    QFuture<void> f = QtConcurrent::run(doAjouter,uuid,tracks);
+    QFuture<void> f = QtConcurrent::run(doAdd,uuid,tracks);
     return true;
 }
 
@@ -365,8 +375,8 @@ bool playlistService::ajouterAsync(const qint64 uuid, const QList<QString> track
  * @brief fonction app par le qfuture
  * @param uuid
  */
-void playlistService::doAjouter(const qint64 uuid, const QList<QString> tracks) {
-    playlistService::getInstance().ajouter(uuid,tracks);
+void playlistService::doAdd(const qint64 uuid, const QList<QString> tracks) {
+    playlistService::getInstance().add(uuid,tracks);
 }
 
 /**
@@ -375,7 +385,7 @@ void playlistService::doAjouter(const qint64 uuid, const QList<QString> tracks) 
  */
 void playlistService::supprimer(const qint64 uuid) {
 
-    qint64 index = trouverIndex(uuid);
+    qint64 index = findIndex(uuid);
     if(index==-1) {
         return;
     }
@@ -394,12 +404,12 @@ void playlistService::supprimer(const qint64 uuid) {
   * @param nom : le nouveau non, doit être non null et ne pas exister
   * @return true si ok + envoie le signal , false si non
   */
-bool playlistService::renommer(const qint64 uuid,const QString &nom) {
+bool playlistService::rename(const qint64 uuid,const QString &nom) {
     if(nom.length()==0) {
         return false;
     }
 
-    qint64 index = trouverIndex(uuid);
+    qint64 index = findIndex(uuid);
     if(index==-1) {
         return false;
     }
@@ -409,8 +419,11 @@ bool playlistService::renommer(const qint64 uuid,const QString &nom) {
     if(item->getType() == Pls::PlsType::M3U) {
         ext = ".m3u";
     }
-    //    QString dest(QDir::homePath()+"/Playlists/"+nom +ext);
-    QString dest(this->repPath+"/"+nom +ext);
+    QString parentDir = QFileInfo(item->getPath()).absolutePath();
+    if(parentDir.isEmpty()) {
+        parentDir = this->repPath;
+    }
+    QString dest(parentDir+"/"+nom +ext);
 
 
     QFileInfo info(dest);
@@ -434,7 +447,7 @@ bool playlistService::renommer(const qint64 uuid,const QString &nom) {
     item->setPath(dest);
     item->setNom(nom);
 
-    classerListe();
+    sortList();
 
     emit nomChanged(uuid,nom);
     emit listeChanged();
@@ -442,29 +455,39 @@ bool playlistService::renommer(const qint64 uuid,const QString &nom) {
 }
 
 /**
- * @brief recharger la liste des playlist
+ * @brief refresh la liste des playlist
  */
-void playlistService::recharger() {
-    //    QDir dir(QDir::homePath()+"/Playlists");
-    QDir dir(this->repPath);
-    dir.setFilter(QDir::Files|QDir::Readable);
-    dir.setSorting(QDir::Name);
-
+void playlistService::refresh() {
     if(liste.length()>0) {
         qDeleteAll(liste);
     }
     liste.clear();
 
-    QStringList l = dir.entryList();
-    foreach (QString f, l) {
-        if(REG_PLS.match(f).hasMatch()) {
-            //            liste.append( plsManager::unmarshaller(QDir::homePath()+"/Playlists/" + f) );
-            liste.append( plsManager::unmarshaller(this->repPath+"/"+ f) );
-        } else if(REG_M3U.match(f).hasMatch()) {
+    QSet<QString> seenFiles;
+    const QStringList locations = getPlaylistLocations();
+
+    foreach (const QString &location, locations) {
+        QDir dir(location);
+        dir.setFilter(QDir::Files|QDir::Readable);
+        dir.setSorting(QDir::Name);
+
+        QStringList l = dir.entryList();
+        foreach (const QString &f, l) {
+            if(REG_PLS.match(f).hasMatch()) {
+                const QString fullPath = dir.absoluteFilePath(f);
+                const QString canonical = QFileInfo(fullPath).canonicalFilePath();
+                const QString key = canonical.isEmpty() ? fullPath : canonical;
+                if(seenFiles.contains(key)) {
+                    continue;
+                }
+                seenFiles.insert(key);
+                liste.append( plsManager::unmarshaller(fullPath) );
+            } else if(REG_M3U.match(f).hasMatch()) {
+            }
         }
     }
 
-    classerListe();
+    sortList();
     emit listeChanged();
 }
 
@@ -473,7 +496,7 @@ void playlistService::recharger() {
  * @param uuid
  * @return
  */
-qint64 playlistService::trouverIndex( const qint64 uuid) const {
+qint64 playlistService::findIndex( const qint64 uuid) const {
     qint64 index = 0;
 
     foreach (Pls *t , liste) {
@@ -487,19 +510,19 @@ qint64 playlistService::trouverIndex( const qint64 uuid) const {
 }
 
 /**
- * @brief classerListe
+ * @brief sortList
  */
-void playlistService::classerListe() {
-    std::sort(liste.begin(), liste.end(), playlistService::ordreAlpha);
+void playlistService::sortList() {
+    std::sort(liste.begin(), liste.end(), playlistService::alphaOrder);
 }
 
 /**
- * @brief ordreAlpha
+ * @brief alphaOrder
  * @param a
  * @param b
  * @return
  */
-bool playlistService::ordreAlpha(  Pls * a, Pls  * b ) {
+bool playlistService::alphaOrder(  Pls * a, Pls  * b ) {
     return a->getNom().compare( b->getNom() ) < 0 ? true : false;
 }
 
@@ -507,27 +530,47 @@ bool playlistService::ordreAlpha(  Pls * a, Pls  * b ) {
  * @brief retourne le repertoire ou sont les playlists
  * @return
  */
+QStringList playlistService::getPlaylistLocations() {
+    QStringList locations;
+    const QString activeLocation = getPlaylistLocation();
+    QFileInfo info(activeLocation);
+    if(info.exists() && info.isDir() && info.isReadable()) {
+        locations.append(QDir::cleanPath(info.absoluteFilePath()));
+    }
+    return locations;
+}
+
+/**
+ * @brief retourne le repertoire ou sont les playlists
+ * @return
+ */
 QString playlistService::getPlaylistLocation() {
+    const quint16 locMode = configService::getInstance().getPlaylistLocation();
+    QString targetPath;
 
-    // on regarde si un local exist
-    QString local = QStandardPaths::writableLocation(QStandardPaths::DataLocation) + "/Playlists";
-    if(QDir().exists(local)) {
-        qDebug() << "playlistService : using local app location" ;
-        return local;
+    if(locMode == PLAYLIST_LOCATION_MUSIC) {
+        targetPath = QDir::cleanPath(QDir::homePath() + "/Music/playlists");
+    } else if(locMode == PLAYLIST_LOCATION_SDCARD) {
+        if(SdcardLocator::getInstance().isPresent()) {
+            QString sdMusic = configService::getInstance().getNomsdcard();
+            if(sdMusic.isEmpty()) {
+                sdMusic = QStringLiteral("Music");
+            }
+            targetPath = QDir::cleanPath(SdcardLocator::getInstance().getLocation() + "/" + sdMusic + "/playlists");
+        } else {
+            qDebug() << "playlistService : sdcard not present, falling back to ~/Playlist";
+            targetPath = QDir::cleanPath(QDir::homePath() + "/Playlist");
+        }
+    } else {
+        targetPath = QDir::cleanPath(QDir::homePath() + "/Playlist");
     }
 
-    // ok, le rep par defaut ???
-    QString def  = QDir::homePath()+"/Playlists";
-    if(QDir().exists(def)) {
-        qDebug() << "playlistService : using default playlist location" ;
-        return def;
+    if(!QDir().exists(targetPath)) {
+        QDir().mkpath(targetPath);
     }
 
-    // on cree le rep
-    QDir().mkpath(local);
-
-    qDebug() << "playlistService : making and using local app location" ;
-    return local;
+    qDebug() << "playlistService : using playlist location" << targetPath;
+    return targetPath;
 }
 
 /**
@@ -554,7 +597,7 @@ void playlistService::onRemoved(QString vurl) {
         }
 
         // on a supprimé des titres, on update la liste
-        ecrireAsync(p->getUuid(),l);
+        writeAsync(p->getUuid(),l);
     }
 }
 
@@ -588,7 +631,7 @@ void playlistService::onMoved(QString vurl, QString as) {
         }
 
         // on a modifié des titres, on update la liste
-        ecrireAsync(p->getUuid(),l);
+        writeAsync(p->getUuid(),l);
     }
 }
 
@@ -601,5 +644,10 @@ void playlistService::onRenamed(QString vurl, QString name) {
     QString p = VFI.getParentVUrl(vurl);
     QString as  = p + (VFI.isRoot(p) ? " " : "/") + name;
     onMoved(vurl, as);
+}
+
+void playlistService::onSourceChanged() {
+    this->repPath = getPlaylistLocation();
+    refresh();
 }
 

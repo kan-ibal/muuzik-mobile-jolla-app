@@ -21,7 +21,7 @@ Dialog {
             donnee.push(listModel.get(i).chemin);
         }
 
-        PlaylistService.ecrireAsync(uuid,donnee);
+        PlaylistService.writeAsync(uuid,donnee);
     }
 
     ListModel {
@@ -245,7 +245,7 @@ Dialog {
     onStatusChanged: {
         // wait for view to load
         if (status===PageStatus.Active && loaded === false ) {
-            PlaylistService.ouvrirAsync(uuid);
+            PlaylistService.openAsync(uuid);
         }
     }
 

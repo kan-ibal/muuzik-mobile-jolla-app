@@ -12,7 +12,7 @@ Page {
     function ouvrir(uuid) {
         var pls = PlaylistService.getPls(uuid);
         playerService.replace(pls.liste);
-        pageStack.push(Qt.resolvedUrl("ListeLecture.qml"));
+        pageStack.push(Qt.resolvedUrl("Playlist.qml"));
     }
 
     //----------------------------------
@@ -135,7 +135,7 @@ Page {
 
             //-----------------------------------------
             function editer(uuid,nom) {
-                pageStack.push(Qt.resolvedUrl("EditerPlaylist.qml"),{"uuid": uuid, "nom": nom});
+                pageStack.push(Qt.resolvedUrl("EditPlaylist.qml"),{"uuid": uuid, "nom": nom});
             }
 
             //-----------------------------------------
@@ -150,7 +150,7 @@ Page {
 
                 //  dialog.canAccept=(dialog.valeur.length>0) && (dialog.valeur !== label);
                 dialog.accepted.connect(function() {
-                    PlaylistService.renommer(uuid,dialog.valeur);
+                    PlaylistService.rename(uuid,dialog.valeur);
                 });
             }
 
@@ -184,7 +184,7 @@ Page {
             MenuItem {
                 text:  vi18n.get("menu.enlecture")
                 onClicked: {
-                    pageStack.push(Qt.resolvedUrl("ListeLecture.qml"));
+                    pageStack.push(Qt.resolvedUrl("Playlist.qml"));
                 }
             }
         }
@@ -216,6 +216,12 @@ Page {
 
     Connections {
         target: PlaylistService
+
+        onListeChanged: {
+            if (loaded) {
+                recharger();
+            }
+        }
 
         onNomChanged : {
             recharger();

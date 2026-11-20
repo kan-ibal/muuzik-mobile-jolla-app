@@ -65,6 +65,60 @@ Page {
                 }
             }
 
+            SectionHeader { text: vi18n.get("options.playlist") }
+
+            ComboBox {
+                id: playlistLocationBox
+                width: parent.width
+                label: vi18n.get("options.playlist.location")
+                currentIndex: ConfigService.playlistLocation
+                menu: ContextMenu {
+                    MenuItem { text: vi18n.get("options.playlist.location.home") }
+                    MenuItem { text: vi18n.get("options.playlist.location.music") }
+                    MenuItem {
+                        enabled: SdcardLocator.present
+                        text: SdcardLocator.present
+                              ? vi18n.get("options.playlist.location.sdcard").arg(ConfigService.nomsdcard.length > 0 ? ConfigService.nomsdcard : "Music")
+                              : vi18n.get("options.playlist.location.sdcard.none").arg(ConfigService.nomsdcard.length > 0 ? ConfigService.nomsdcard : "Music")
+                    }
+                }
+                onCurrentIndexChanged: {
+                    if (currentIndex !== ConfigService.playlistLocation) {
+                        ConfigService.playlistLocation = currentIndex;
+                    }
+                }
+            }
+
+            ComboBox {
+                id: playlistFormatBox
+                width: parent.width
+                label: vi18n.get("options.playlist.format")
+                currentIndex: ConfigService.playlistFormat
+                menu: ContextMenu {
+                    MenuItem { text: vi18n.get("options.playlist.format.jolla") }
+                    MenuItem { text: vi18n.get("options.playlist.format.unplayer") }
+                }
+                onCurrentIndexChanged: {
+                    if (currentIndex !== ConfigService.playlistFormat) {
+                        ConfigService.playlistFormat = currentIndex;
+                    }
+                }
+            }
+
+            Connections {
+                target: ConfigService
+                onPlaylistLocationChanged: {
+                    if (playlistLocationBox.currentIndex !== ConfigService.playlistLocation) {
+                        playlistLocationBox.currentIndex = ConfigService.playlistLocation;
+                    }
+                }
+                onPlaylistFormatChanged: {
+                    if (playlistFormatBox.currentIndex !== ConfigService.playlistFormat) {
+                        playlistFormatBox.currentIndex = ConfigService.playlistFormat;
+                    }
+                }
+            }
+
             SectionHeader { text: vi18n.get("options.navigation") }
             TextSwitch {
                 text:  vi18n.get("options.navigation.vide")

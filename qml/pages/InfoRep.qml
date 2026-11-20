@@ -3,7 +3,7 @@ import Sailfish.Silica 1.0
 import "../components"
 import "../hints"
 import "../js/app.js" as App
-import "../js/affichage.js" as Affichage
+import "../js/display.js" as Affichage
 
 import pl.kanibal.virtualfiles 1.0
 import org.vostok.metadata 1.0

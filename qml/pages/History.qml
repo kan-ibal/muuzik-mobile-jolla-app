@@ -2,7 +2,7 @@ import QtQuick 2.2
 import Sailfish.Silica 1.0
 import "../components"
 import "../js/app.js" as App
-import "../js/affichage.js" as Affichage
+import "../js/display.js" as Affichage
 
 Page {
     id:page
@@ -11,13 +11,13 @@ Page {
 
     //-----------------------------------------
     function openUri(v) {
-        pageStack.push(Qt.resolvedUrl("Navigateur.qml"), {uri:v})
+        pageStack.push(Qt.resolvedUrl("Browser.qml"), {uri:v})
     }
 
     //-----------------------------------------
     function ouvrir(v) {
         playerService.replace([v]);
-        pageStack.push(Qt.resolvedUrl("ListeLecture.qml"));
+        pageStack.push(Qt.resolvedUrl("Playlist.qml"));
     }
 
     //-----------------------------------------
@@ -194,7 +194,7 @@ Page {
                 text:  vi18n.get("menu.enlecture")
                 visible: page.orientation === Orientation.Portrait || page.orientation === Orientation.PortraitInverted
                 onClicked: {
-                    pageStack.push(Qt.resolvedUrl("ListeLecture.qml"));
+                    pageStack.push(Qt.resolvedUrl("Playlist.qml"));
                 }
             }
             MenuItem {
