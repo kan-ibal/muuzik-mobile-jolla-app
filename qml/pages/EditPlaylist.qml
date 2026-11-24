@@ -5,134 +5,150 @@ import "../js/app.js" as App
 import org.vostok.metadata 1.0
 
 Dialog {
-    id:page
+    id: page
 
-    property bool active: status===PageStatus.Active
-    property string uuid
-    property string nom
+    property bool active: status === PageStatus.Active
+    property string uuid: ""
+    property string nom: ""
     property bool loaded: false
-    property bool modif: false
+    property bool modified: false
 
-    canAccept: modif !== false
+    readonly property bool isSavedPlaylist: uuid.length > 0
+    readonly property bool isReady: isSavedPlaylist ? loaded : true
+
+    canAccept: isSavedPlaylist && modified !== false
 
     onAccepted: {
-        var donnee=[];
-        for(var i = 0 ; i < listModel.count ; i++ ) {
-            donnee.push(listModel.get(i).chemin);
+        if (!isSavedPlaylist) {
+            return;
+        }
+        var tracks = [];
+        for (var i = 0; i < listModel.count; i++) {
+            tracks.push(listModel.get(i).chemin);
         }
 
-        PlaylistService.writeAsync(uuid,donnee);
+        PlaylistService.writeAsync(uuid, tracks);
     }
 
     ListModel {
-        id:listModel
+        id: listModel
 
-        //-----------------------------------------
-        function remplir(list) {
-            var l = [];
-            for(var i in list) {
-                l.push({
-                           uuid: list[i].uuid,
-                           titre: list[i].titre,
-                           chemin: list[i].chemin,
-                           duree: list[i].duree,
-                           album: list[i].album,
-                           artiste: list[i].artiste
-                       });
+        function populate(list) {
+            var items = [];
+            for (var i in list) {
+                items.push({
+                               uuid: list[i].uuid,
+                               titre: list[i].titre,
+                               chemin: list[i].chemin,
+                               duree: list[i].duree,
+                               album: list[i].album,
+                               artiste: list[i].artiste
+                           });
             }
             listModel.clear();
-            listModel.append(l);
+            listModel.append(items);
         }
 
-        //-----------------------------------------
-        function monter(i) {
-            modif=true;
-            move(i,i-1,1);
+        function moveUp(i) {
+            modified = true;
+            move(i, i - 1, 1);
         }
 
-        //-----------------------------------------
-        function descendre(i) {
-            modif=true;
-            move(i,i+1,1);
+        function moveDown(i) {
+            modified = true;
+            move(i, i + 1, 1);
         }
 
-        //-----------------------------------------
-        function supprimer(i) {
-            modif=true;
+        function removeAt(i) {
+            modified = true;
             remove(i);
-            //     donnee.splice(i,1);
         }
-
     }
 
     Component {
-        id: entree
+        id: savedHeader
+
+        DialogHeader {
+            title: nom
+            acceptText: vi18n.get("playlists.editer.sauver")
+        }
+    }
+
+    Component {
+        id: queueHeader
+
+        PageHeader {
+            title: vi18n.get("enlecture.edition.titre")
+        }
+    }
+
+    Component {
+        id: savedTrackDelegate
 
         ListItem {
-            id: fileItem
+            id: trackItem
             width: ListView.view.width
-            contentHeight: Math.max(img.height,description.height) +
-                           (  ConfigService.marge ? Theme.paddingSmall : 0)
+            contentHeight: Math.max(thumb.height, description.height) +
+                           (ConfigService.marge ? Theme.paddingSmall : 0)
 
             Miniature {
-                id: img
+                id: thumb
                 anchors {
                     left: parent.left
                     leftMargin: Theme.horizontalPageMargin
                     verticalCenter: parent.verticalCenter
                 }
 
-                source: "image://muuzik/img/son?"+Theme.primaryColor
+                source: "image://muuzik/img/son?" + Theme.primaryColor
             }
 
             LabelPlus {
-                id:description
+                id: description
                 anchors {
-                    left: img.right
-                    right: sup.left
+                    left: thumb.right
+                    right: deleteButton.left
                     leftMargin: Theme.horizontalPageMargin
                     rightMargin: Theme.horizontalPageMargin
                     verticalCenter: parent.verticalCenter
                 }
-                text:titre
-                value: "klkllklkjlkjlk"
+                text: titre
+                value: ""
 
                 elide: Text.ElideRight
-                highlighted: false;
+                highlighted: false
             }
 
             IconButton {
-                id:sup
-                icon.source:   "image://theme/icon-m-delete?" + Theme.primaryColor
+                id: deleteButton
+                icon.source: "image://theme/icon-m-delete?" + Theme.primaryColor
                 width: Theme.iconSizeSmallPlus
                 height: Theme.iconSizeSmallPlus
                 anchors {
                     verticalCenter: parent.verticalCenter
-                    right: monter.left
+                    right: upButton.left
                     rightMargin: Theme.paddingLarge
                 }
 
-                onClicked: showRemorseItem();
-
+                onClicked: showRemorseItem()
             }
 
             IconButton {
-                id:monter
-                icon.source:   "image://theme/icon-m-up?"+ Theme.primaryColor
+                id: upButton
+                icon.source: "image://theme/icon-m-up?" + Theme.primaryColor
                 width: Theme.iconSizeSmallPlus
                 height: Theme.iconSizeSmallPlus
                 anchors {
                     verticalCenter: parent.verticalCenter
-                    right: descendre.left
+                    right: downButton.left
                     rightMargin: Theme.paddingLarge
                 }
-                enabled: index !==0
-                onClicked: listModel.monter(index)
+                enabled: index !== 0
+                onClicked: listModel.moveUp(index)
             }
 
             IconButton {
-                id:descendre
-                icon.source:   "image://theme/icon-m-down?"+ Theme.primaryColor
+                id: downButton
+                icon.source: "image://theme/icon-m-down?" + Theme.primaryColor
                 width: Theme.iconSizeSmallPlus
                 height: Theme.iconSizeSmallPlus
                 anchors {
@@ -141,18 +157,17 @@ Dialog {
                     rightMargin: Theme.paddingLarge
                 }
                 enabled: index !== listModel.count - 1
-                onClicked: listModel.descendre(index)
+                onClicked: listModel.moveDown(index)
             }
 
             RemorseItem { id: remorse }
 
-            ListView.onRemove: animateRemoval(fileItem)
+            ListView.onRemove: animateRemoval(trackItem)
 
-            //-----------------------------------------
             function showRemorseItem() {
-                remorse.execute(fileItem, "Deleting", function() {
-                    listModel.supprimer(index);
-                } );
+                remorse.execute(trackItem, "Deleting", function() {
+                    listModel.removeAt(index);
+                });
             }
 
             Component.onCompleted: {
@@ -162,12 +177,12 @@ Dialog {
 
             Connections {
                 target: ARTService
-                onArtFound : {
-                    if( vurl !== chemin) {
+                onArtFound: {
+                    if (vurl !== chemin) {
                         return;
                     }
 
-                    img.overlay = artPath;
+                    thumb.overlay = artPath;
                 }
             }
 
@@ -175,88 +190,174 @@ Dialog {
                 target: MetaDataService
 
                 onMetaDataAvailable: {
-                    if( chemin !== vurl) {
+                    if (chemin !== vurl) {
                         return;
                     }
 
-                    var t= "";
-                    if(meta.duree>0) {
-                        t = App.getDuree(meta.duree) + " - ";
+                    var durationPrefix = "";
+                    if (meta.duree > 0) {
+                        durationPrefix = App.getDuree(meta.duree) + " - ";
                     }
 
-                    if(meta.artiste.length===0 && meta.album.length===0) {
-                        description.value= vi18n.get("navigateur.audio.vide").arg(t);
+                    if (meta.artiste.length === 0 && meta.album.length === 0) {
+                        description.value = vi18n.get("navigateur.audio.vide").arg(durationPrefix);
                         return;
                     }
 
-                    if(meta.album.length===0) {
-                        description.value= vi18n.get("navigateur.audio.description.simple").arg(t).arg(meta.artiste);
+                    if (meta.album.length === 0) {
+                        description.value = vi18n.get("navigateur.audio.description.simple").arg(durationPrefix).arg(meta.artiste);
                         return;
                     }
 
-                    if(meta.artiste.length===0) {
-                        description.value= vi18n.get("navigateur.audio.description.simple").arg(t).arg(meta.album);
+                    if (meta.artiste.length === 0) {
+                        description.value = vi18n.get("navigateur.audio.description.simple").arg(durationPrefix).arg(meta.album);
                         return;
                     }
 
-                    description.value= vi18n.get("navigateur.audio.description").arg(t).arg(meta.artiste).arg(meta.album);
+                    description.value = vi18n.get("navigateur.audio.description").arg(durationPrefix).arg(meta.artiste).arg(meta.album);
                 }
             }
         }
     }
 
+    Component {
+        id: queueTrackDelegate
+
+        ListItem {
+            id: trackItem
+            width: ListView.view.width
+            contentHeight: Math.max(trackTitle.height + trackInfo.height, deleteButton.height) + Theme.paddingLarge
+
+            IconButton {
+                id: deleteButton
+                icon.source: "image://theme/icon-m-delete?" + Theme.primaryColor
+                width: Theme.iconSizeSmallPlus
+                height: Theme.iconSizeSmallPlus
+                anchors {
+                    verticalCenter: parent.verticalCenter
+                    left: parent.left
+                    leftMargin: Theme.paddingLarge
+                }
+
+                onClicked: showRemorseItem()
+            }
+
+            Label {
+                id: trackTitle
+                anchors {
+                    left: deleteButton.right
+                    right: upButton.left
+                    leftMargin: Theme.paddingLarge
+                    rightMargin: Theme.paddingLarge
+                    bottomMargin: Theme.paddingTiny
+                }
+                text: titre
+                elide: Text.ElideRight
+            }
+
+            Label {
+                id: trackInfo
+                anchors {
+                    left: deleteButton.right
+                    right: upButton.left
+                    top: trackTitle.bottom
+                    leftMargin: Theme.paddingLarge
+                    rightMargin: Theme.paddingLarge
+                }
+                font.pixelSize: Theme.fontSizeTiny
+                text: (artiste.length > 0 && album.length > 0) ? (artiste + " - " + album) : (artiste.length > 0 ? artiste : album)
+                elide: Text.ElideRight
+            }
+
+            IconButton {
+                id: upButton
+                icon.source: "image://theme/icon-m-up?" + Theme.primaryColor
+                width: Theme.iconSizeSmallPlus
+                height: Theme.iconSizeSmallPlus
+                anchors {
+                    verticalCenter: parent.verticalCenter
+                    right: downButton.left
+                    rightMargin: Theme.paddingLarge
+                }
+                enabled: index !== 0
+                onClicked: playerService.monterUuid(uuid)
+            }
+
+            IconButton {
+                id: downButton
+                icon.source: "image://theme/icon-m-down?" + Theme.primaryColor
+                width: Theme.iconSizeSmallPlus
+                height: Theme.iconSizeSmallPlus
+                anchors {
+                    verticalCenter: parent.verticalCenter
+                    right: parent.right
+                    rightMargin: Theme.paddingLarge
+                }
+                enabled: index !== playerService.size - 1
+                onClicked: playerService.descendreUuid(uuid)
+            }
+
+            RemorseItem { id: remorse }
+
+            ListView.onRemove: animateRemoval(trackItem)
+
+            function showRemorseItem() {
+                var trackUuid = uuid;
+                remorse.execute(trackItem, "Deleting", function() {
+                    playerService.retirerUuid(trackUuid);
+                });
+            }
+        }
+    }
+
     SilicaListView {
-        id: fileList
-        anchors{
-            top:parent.top
+        id: trackList
+        anchors {
+            top: parent.top
             left: parent.left
         }
         height: parent.height
         width: parent.width
         clip: true
-        visible: loaded
+        visible: isReady
 
-        model: listModel
+        model: isSavedPlaylist ? listModel : playerService.list
 
-        VerticalScrollDecorator { }
+        VerticalScrollDecorator { flickable: trackList }
 
         addDisplaced: Transition {
             NumberAnimation { properties: "x,y"; duration: 1000 }
         }
 
-        header: DialogHeader {
-            title: nom
-            acceptText: vi18n.get("playlists.editer.sauver")
-        }
+        header: isSavedPlaylist ? savedHeader : queueHeader
 
-        delegate: entree
+        delegate: isSavedPlaylist ? savedTrackDelegate : queueTrackDelegate
 
         ViewPlaceholder {
-            enabled:  listModel.count === 0 && loaded
-            text:  vi18n.get("enlecture.vide")
-            hintText:  vi18n.get("enlecture.vide.sum")
+            enabled: isReady && trackList.count === 0
+            text: vi18n.get("enlecture.vide")
+            hintText: vi18n.get("enlecture.vide.sum")
         }
     }
 
     Attente {
-        enabled: loaded === false || status===PageStatus.Activating
+        enabled: !isReady || status === PageStatus.Activating
     }
 
     onStatusChanged: {
-        // wait for view to load
-        if (status===PageStatus.Active && loaded === false ) {
+        if (isSavedPlaylist && status === PageStatus.Active && !loaded) {
             PlaylistService.openAsync(uuid);
         }
     }
 
     Connections {
-        target:   PlaylistService
+        target: PlaylistService
         onPlaylistOuverte: {
-            if(uuid != page.uuid) {
+            if (!isSavedPlaylist || uuid != page.uuid) {
                 return;
             }
             loaded = true;
-            listModel.remplir(liste);
+            listModel.populate(liste);
         }
     }
 }

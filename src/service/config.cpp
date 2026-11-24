@@ -64,7 +64,9 @@ configService::configService(QObject *parent)
     if(SdcardLocator::getInstance().isPresent()) {
         sdcard = SdcardLocator::getInstance().getLocation();
         initSDcard();
-        }
+    }
+
+    connect(&SdcardLocator::getInstance(), SIGNAL(sdcardChanged()), this, SLOT(onSdcardChanged()));
 
     setModif();
 }
@@ -614,4 +616,22 @@ bool configService::initSDcard()  {
     }
 
     return true;
+}
+
+void configService::onSdcardChanged() {
+    if (!sdcard.isEmpty()) {
+        source.removeAll(QString(sdcard + "/" + nomsdcard));
+    }
+
+    if (SdcardLocator::getInstance().isPresent()) {
+        sdcard = SdcardLocator::getInstance().getLocation();
+        initSDcard();
+    } else {
+        sdcard = QString::null;
+        modeRO = false;
+    }
+
+    VFI.setSources(source);
+    setModif();
+    emit sourceChanged();
 }

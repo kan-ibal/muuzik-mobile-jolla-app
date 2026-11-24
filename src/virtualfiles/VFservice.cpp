@@ -2,6 +2,7 @@
 #include <QtQml>
 #include <QMetaType>
 #include <QQmlEngine>
+#include <QFile>
 #include <QFileInfo>
 #include <QDir>
 #include <QRegularExpression>
@@ -990,14 +991,18 @@ bool VFService::move(const QString &uri, const QString &into) {
             return false;
         }
 
-        QString cmd("mv -u -t " + VFService::sanitize(target.absolutePath()) + " " + VFService::sanitize(source));
-        int term_status = system(cmd.toStdString().c_str());
-        if( WIFEXITED( term_status ) ) {
-            qDebug() << "ok dep "  << WIFEXITED( term_status );
-
-            ok = ok && (WEXITSTATUS (term_status) != -1 ? true : false);
-        } else {
-            ok = false;
+        const QString destPath = target.absoluteFilePath(info.fileName());
+        if (QFileInfo(source).absoluteFilePath() != QFileInfo(destPath).absoluteFilePath()) {
+            if (!QDir().rename(source, destPath)) {
+                if (info.isFile() && !info.isSymLink() && QFile::copy(source, destPath)) {
+                    if (!QFile::remove(source)) {
+                        QFile::remove(destPath);
+                        ok = false;
+                    }
+                } else {
+                    ok = false;
+                }
+            }
         }
     }
 

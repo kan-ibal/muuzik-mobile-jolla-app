@@ -335,6 +335,9 @@ bool modeRO; // si en read only, ne pas autoriser les service de cache / recup
      */
     void initialisation();
 
+private slots:
+    void onSdcardChanged();
+
 signals:
     void sourceChanged();
     void showEmptyDirChanged();

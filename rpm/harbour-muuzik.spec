@@ -17,7 +17,7 @@ Name:       harbour-muuzik
 %{!?qtc_make:%define qtc_make make}
 %{?qtc_builddir:%define _builddir %qtc_builddir}
 Summary:    Muuzik! player
-Version:    2.6.0
+Version:    2.6.1
 Release:    0.sfos5.1
 Group:      Qt/Qt
 License:    MPLv2

@@ -35,9 +35,9 @@
 class SdcardLocator : public QObject {
 
     Q_OBJECT
-    Q_PROPERTY( QString location READ getLocation CONSTANT )
-    Q_PROPERTY( bool present READ isPresent CONSTANT )
-    Q_PROPERTY( QString type READ getType CONSTANT )
+    Q_PROPERTY( QString location READ getLocation NOTIFY sdcardChanged )
+    Q_PROPERTY( bool present READ isPresent NOTIFY sdcardChanged )
+    Q_PROPERTY( QString type READ getType NOTIFY sdcardChanged )
 
 public:
     /**
@@ -79,6 +79,13 @@ public:
       */
     Q_INVOKABLE bool isOnSdcard(const QString &url);
 
+    /**
+      * @brief rescan removable media mount points
+      */
+    Q_INVOKABLE void refresh();
+
+signals:
+    void sdcardChanged();
 
 private:
     explicit SdcardLocator(QObject *parent = 0);

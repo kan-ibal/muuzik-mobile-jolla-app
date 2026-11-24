@@ -19,7 +19,9 @@ Page {
     }
 
     onStatusChanged: {
-        if (status === PageStatus.Deactivating && sdcardDirField.focus) {
+        if (status === PageStatus.Activating) {
+            SdcardLocator.refresh();
+        } else if (status === PageStatus.Deactivating && sdcardDirField.focus) {
             sdcardDirField.focus = false;
         }
     }

@@ -297,7 +297,7 @@ Page {
                 MenuItem {
                     text:  vi18n.get("menu.editer")
                     enabled:  playerService.size !== 0
-                    onClicked: {pageStack.push(Qt.resolvedUrl("EditerListeLecture.qml"));}
+                    onClicked: {pageStack.push(Qt.resolvedUrl("EditPlaylist.qml"));}
                 }
             }
         }
