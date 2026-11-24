@@ -34,7 +34,7 @@ Page {
         PullDownMenu {
             MenuItem {
                 text:  vi18n.get("menu.apropos")
-                onClicked: pageStack.push(Qt.resolvedUrl("Apropos.qml"))
+                onClicked: pageStack.push(Qt.resolvedUrl("About.qml"))
             }
             MenuItem {
                 text:  vi18n.get("options.default")

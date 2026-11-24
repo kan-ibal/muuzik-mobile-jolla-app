@@ -48,10 +48,10 @@ MetaDataService& MetaDataService::getInstance() {
  */
 void MetaDataService::init(QQmlContext *context, QString name) {
     context->setContextProperty(name,&MetaDataService::getInstance());
-    qmlRegisterType<MetaData>("org.vostok.metadata", 1, 0, "MetaData");
+    qmlRegisterType<MetaData>("pl.kanibal.metadata", 1, 0, "MetaData");
     qRegisterMetaType<QList<MetaData*> >( "QList<MetaData*>" );
     qRegisterMetaType<MetaDataList>( "MetaDataList" );
-    qmlRegisterType<AlbumStat>("org.vostok.metadata", 1, 0, "AlbumStat");
+    qmlRegisterType<AlbumStat>("pl.kanibal.metadata", 1, 0, "AlbumStat");
 }
 
 /**

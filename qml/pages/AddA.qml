@@ -175,7 +175,7 @@ Page {
         delegate: entree
     }
 
-    Attente {
+    Wait {
         enabled: loaded === false || status===PageStatus.Activating
     }
 

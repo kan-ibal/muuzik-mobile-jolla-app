@@ -237,7 +237,7 @@ Page {
         }
     }
 
-    Attente {
+    Wait {
         enabled: status===PageStatus.Activating || recentService.enCours
     }
 
@@ -250,7 +250,7 @@ Page {
 
     Hint {
         id:hin1
-        clee : "/vostok/muuzik/hint/recent"
+        clee : "/kanibal/muuzik/hint/recent"
         texte: vi18n.get("hint.recent")
         direction: TouchInteraction.Down
         interactionMode :TouchInteraction.Pull

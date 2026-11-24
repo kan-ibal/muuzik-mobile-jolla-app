@@ -22,8 +22,8 @@ Page {
         var ctag = Qt.createComponent(
                     page.orientation === Orientation.Portrait ||
                     page.orientation === Orientation.PortraitInverted ?
-                        "../components/menu/MenuListeVertical.qml" :
-                        "../components/menu/MenuGrilleHorizontal.qml");
+                        "../components/menu/MenuListVertical.qml" :
+                        "../components/menu/MenuGridHorizontal.qml");
         page.contenu  = ctag.createObject(conteneur, {model:listeModel});
 
     }
@@ -105,7 +105,7 @@ Page {
         PullDownMenu {
             MenuItem {
                 text:  vi18n.get("menu.apropos")
-                onClicked: pageStack.push(Qt.resolvedUrl("Apropos.qml"))
+                onClicked: pageStack.push(Qt.resolvedUrl("About.qml"))
             }
             MenuItem {
                 text:  vi18n.get("menu.config")

@@ -7,7 +7,7 @@ import "../js/app.js" as App
 import "../js/display.js" as Affichage
 
 import pl.kanibal.virtualfiles 1.0
-import org.vostok.metadata 1.0
+import pl.kanibal.metadata 1.0
 
 
 Page {
@@ -601,7 +601,7 @@ Page {
 
                 model: outilsModel
 
-                delegate:  BoutonPlus {
+                delegate:  ButtonPlus {
                     width: outils.itemWidth
                     height: outils.height
 
@@ -617,19 +617,19 @@ Page {
 
 
 
-    Attente {
+    Wait {
         enabled: loaded === false || status===PageStatus.Activating
     }
 
     HintPress {
         id:hin1
-        clee : "/vostok/muuzik/hint/navigateur"
+        clee : "/kanibal/muuzik/hint/navigateur"
         texte: vi18n.get("hint.navigateur")
     }
 
     Hint {
         id:hin2
-        clee : "/vostok/muuzik/hint/navigateur/tool"
+        clee : "/kanibal/muuzik/hint/navigateur/tool"
         texte: ""
         direction: TouchInteraction.Swipe
         starty: Screen.height * 0.9

@@ -157,7 +157,7 @@ Page {
         webLoader.active = false;
     }
 
-    Attente {
+    Wait {
         enabled: (ParoleService.enCours || status===PageStatus.Activating) && (done === false)
     }
 

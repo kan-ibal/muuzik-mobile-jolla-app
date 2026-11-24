@@ -115,7 +115,7 @@ Item {
     }
 
     // le compteur de titre
-    CompteurTitre {
+    TitleCounter {
         id: compteur
         anchors {
             horizontalCenter: parent.horizontalCenter

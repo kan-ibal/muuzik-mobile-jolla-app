@@ -63,7 +63,7 @@ Rectangle {
             width: _vertical ? parent.width : (parent.width / 2) - Theme.paddingMedium
             height: jaugeC.height
 
-            JaugeTitre {
+            TtileGauge {
                 id: jaugeC
 
                 anchors {
@@ -126,7 +126,7 @@ Rectangle {
                 y: Math.max(0, (parent.height - height) / 2)
                 spacing: Theme.paddingSmall
 
-                InfoTitre {
+                TitleInfo {
                 }
 
                 Column {
@@ -188,7 +188,7 @@ Rectangle {
         }
 
         // echelle avancement dans le titre
-        EchelleTitre {
+        TitleScale {
             id: echelle
             anchors {
                 bottom: parent.bottom
@@ -232,7 +232,7 @@ Rectangle {
             height: Theme.iconSizeLarge * principale.ratio
             width: parent.width
 
-            BarreControlePlayer {
+            PlayerControlBar {
                 anchors {
                     horizontalCenter: panneauOuvert ? parent.horizontalCenter : undefined
                     left: panneauOuvert ? undefined : parent.left
@@ -244,7 +244,7 @@ Rectangle {
             }
 
             // le compteur de titre
-            CompteurTitre {
+            TitleCounter {
                 color: "white"
                 visible: panneauOuvert === false
                 anchors {

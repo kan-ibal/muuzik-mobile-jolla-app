@@ -2,7 +2,7 @@ import QtQuick 2.2
 import Sailfish.Silica 1.0
 import "../components"
 import "../js/app.js" as App
-import org.vostok.metadata 1.0
+import pl.kanibal.metadata 1.0
 
 Dialog {
     id: page
@@ -340,7 +340,7 @@ Dialog {
         }
     }
 
-    Attente {
+    Wait {
         enabled: !isReady || status === PageStatus.Activating
     }
 

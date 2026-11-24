@@ -4,7 +4,7 @@ import "../js/app.js" as App
 import "../components"
 import "../hints"
 import pl.kanibal.virtualfiles 1.0
-import org.vostok.metadata 1.0
+import pl.kanibal.metadata 1.0
 
 Page {
     id:page
@@ -252,7 +252,7 @@ Page {
                     visible: nightModeService.active===false && playerService.list.length>0
                     text:  vi18n.get("menu.nuit.on")
                     onClicked: {
-                        pageStack.push(Qt.resolvedUrl("Minuteur.qml"));
+                        pageStack.push(Qt.resolvedUrl("Timer.qml"));
                     }
                 }
                 MenuItem {
@@ -302,7 +302,7 @@ Page {
             }
         }
 
-        ControlePlayer {
+        PlayerControl {
             id:controle
             panneauOuvert: playerService.showControl
 
@@ -318,7 +318,7 @@ Page {
 
     HintPress {
         id:hin1
-        clee : "/vostok/muuzik/hint/controle"
+        clee : "/kanibal/muuzik/hint/controle"
         texte: vi18n.get("hint.controle")
         startx: Screen.width*0.5
         starty: Screen.height - controle.height
@@ -327,7 +327,7 @@ Page {
 
     Hint {
         id:hin2
-        clee : "/vostok/muuzik/hint/listelecture"
+        clee : "/kanibal/muuzik/hint/listelecture"
         texte: vi18n.get("hint.playlist")
         direction:TouchInteraction.Down
         interactionMode:TouchInteraction.Pull
@@ -336,7 +336,7 @@ Page {
 
     Hint {
         id:hin3
-        clee : "/vostok/muuzik/hint/bio"
+        clee : "/kanibal/muuzik/hint/bio"
         texte: vi18n.get("hint.bio")
         direction:TouchInteraction.Left
         interactionMode:TouchInteraction.Swipe
@@ -345,7 +345,7 @@ Page {
 
     HintPress {
         id:hin4
-        clee : "/vostok/muuzik/hint/context"
+        clee : "/kanibal/muuzik/hint/context"
         texte: vi18n.get("hint.context")
     }
 
@@ -353,7 +353,7 @@ Page {
         hin1.lancer();
     }
 
-    Attente {
+    Wait {
         enabled: status===PageStatus.Activating || playerService.enCours
     }
 

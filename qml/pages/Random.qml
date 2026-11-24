@@ -196,7 +196,7 @@ Dialog {
         }
     }
 
-    Attente {
+    Wait {
         enabled: recentService.enCours || status === PageStatus.Activating
     }
 

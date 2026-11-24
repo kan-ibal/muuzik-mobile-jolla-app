@@ -117,9 +117,11 @@ OTHER_FILES += qml/harbour-muuzik.qml \
     qml/cover/*.qml \
     qml/pages/*.qml \
     qml/components/*.qml \
+    qml/components/menu/*.qml \
+    qml/components/player/*.qml \
+    qml/dlg/*.qml \
     qml/hints/*.qml \
     qml/js/*.js \
-    rpm/harbour-muuzik.changes \
     rpm/harbour-muuzik.spec \
     rpm/harbour-muuzik.yaml \
     harbour-muuzik.desktop
@@ -136,11 +138,9 @@ DISTFILES += \
     harbour-muuzik.qrc \
     qml/components/* \
     qml/components/menu/* \
+    qml/components/player/* \
     qml/pages/* \
     qml/dlg/* \
     qml/cover/* \
     qml/hints/* \
-    qml/components/player/* \
-    qml/js/display.js \
-    qml/pages/InfoMedia.qml \
-    qml/pages/InfoRep.qml
+    qml/js/*

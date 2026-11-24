@@ -74,13 +74,13 @@ Page {
                 SectionLink {
                     name: vi18n.get("info.voir.bio")
                     enabled: artiste.length >0
-                    onClicked: pageStack.push(Qt.resolvedUrl("Biographie.qml"),
+                    onClicked: pageStack.push(Qt.resolvedUrl("Biography.qml"),
                                               {artiste:artiste})
                 }
                 SectionLink {
                     name: vi18n.get("info.voir.paroles")
                     enabled: titre.length >0
-                    onClicked: pageStack.push(Qt.resolvedUrl("Parole.qml"),
+                    onClicked: pageStack.push(Qt.resolvedUrl("Lyrics.qml"),
                                               {chemin:chemin,artiste:artiste,titre:titre})
                 }
             }

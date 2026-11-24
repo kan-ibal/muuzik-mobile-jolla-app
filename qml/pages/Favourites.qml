@@ -196,7 +196,7 @@ Page {
         }
     }
 
-    Attente {
+    Wait {
 
         enabled: loaded === false || status===PageStatus.Activating
     }

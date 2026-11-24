@@ -6,7 +6,7 @@ import "../js/app.js" as App
 import "../js/display.js" as Affichage
 
 import pl.kanibal.virtualfiles 1.0
-import org.vostok.metadata 1.0
+import pl.kanibal.metadata 1.0
 
 Page {
     id: page

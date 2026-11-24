@@ -218,7 +218,7 @@ Page {
         }
     }
 
-    Attente {
+    Wait {
         enabled:  status===PageStatus.Activating
     }
 

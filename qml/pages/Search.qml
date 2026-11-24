@@ -1,10 +1,11 @@
 import QtQuick 2.2
+import QtQuick 2.2 as Quick
 import Sailfish.Silica 1.0
 import "../components"
 import "../hints"
 import "../js/app.js" as App
 import pl.kanibal.virtualfiles 1.0
-import org.vostok.metadata 1.0
+import pl.kanibal.metadata 1.0
 
 Page {
     id: page
@@ -236,7 +237,7 @@ Page {
                 autoSearchTimer.restart()
             }
 
-            Timer {
+            Quick.Timer {
                 id: autoSearchTimer
                 running: false
                 interval: 1500
@@ -279,7 +280,7 @@ Page {
 
     Hint {
         id: searchHint
-        clee: "/vostok/muuzik/hint/recherche"
+        clee: "/kanibal/muuzik/hint/recherche"
         texte: vi18n.get("hint.recherche")
         direction: TouchInteraction.Down
         interactionMode: TouchInteraction.Pull
@@ -296,7 +297,7 @@ Page {
         onButtonClicked: IndexeurService.recharger()
     }
 
-    Attente {
+    Wait {
         enabled: IndexeurService.enCours || status === PageStatus.Activating
     }
 

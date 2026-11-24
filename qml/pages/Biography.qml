@@ -302,7 +302,7 @@ Page {
         }
     }
 
-    Attente {
+    Wait {
         enabled: (LastfmService.enCours || status===PageStatus.Activating) && (done===false)
     }
 
