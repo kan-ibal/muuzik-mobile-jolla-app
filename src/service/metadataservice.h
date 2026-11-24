@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QQmlContext>
 #include <QMutex>
+#include <QHash>
 
 #include "../bean/MetaData.h"
 #include "../bean/albumstat.h"
@@ -67,12 +68,15 @@ public:
       */
     Q_INVOKABLE void getStatFromAlbumASynch(const QString &vurl);
 
+    void registerStreamHint(const QString &vurl, const QString &title);
+
 private:
     explicit MetaDataService(QObject *parent = 0);
     virtual ~MetaDataService();
 
     mutable QMutex mutex;
     QHash<QString, MetaData *> cache;
+    QHash<QString, QString> streamTitleHints;
 
     QHash<QString, AlbumStat *> statCache;
 

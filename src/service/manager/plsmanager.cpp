@@ -12,6 +12,7 @@
 #include "../metadataservice.h"
 
 #include "../../virtualfiles/VFservice.h"
+#include "../../util/webradioutil.h"
 
 plsManager::plsManager(QObject *parent) : QObject(parent) {
 }
@@ -27,6 +28,7 @@ struct PlsEntry {
     QString filePath;
     QString title;
     quint64 length;
+    bool isStream;
 };
 }
 
@@ -37,6 +39,15 @@ bool plsManager::marshaller(const QList<MetaData *> list ,const QString &path ) 
         if (!s) {
             continue;
         }
+        if (WebRadioUtil::isStreamUrl(s->getChemin())) {
+            PlsEntry entry;
+            entry.filePath = s->getChemin().trimmed();
+            entry.title = s->getTitre();
+            entry.length = s->getDuree();
+            entry.isStream = true;
+            entries.append(entry);
+            continue;
+        }
         const QString filePath = VFI.getPathFromVUrl(s->getChemin());
         if (filePath.isEmpty()) {
             continue;
@@ -45,6 +56,7 @@ bool plsManager::marshaller(const QList<MetaData *> list ,const QString &path ) 
         entry.filePath = filePath;
         entry.title = s->getTitre();
         entry.length = s->getDuree();
+        entry.isStream = false;
         entries.append(entry);
     }
 
@@ -61,7 +73,7 @@ bool plsManager::marshaller(const QList<MetaData *> list ,const QString &path ) 
 
         int i=1;
         foreach (const PlsEntry &e, entries) {
-            stream << "File" << i << "=" << (useFileScheme ? QStringLiteral("file://") : QString()) << e.filePath << "\n";
+            stream << "File" << i << "=" << ((!e.isStream && useFileScheme) ? QStringLiteral("file://") : QString()) << e.filePath << "\n";
             stream << "Title" << i << "=" << e.title << "\n";
             stream << "Length" << i << "=" << e.length << "\n";
             i++;
@@ -120,34 +132,47 @@ Pls *plsManager::unmarshaller(const QString &path ) {
         }
         try {
             QString p = hash.value(fileKey).trimmed();
-            if(p.startsWith(QStringLiteral("file://"), Qt::CaseInsensitive)) {
-                const QString candidate = p.startsWith(QStringLiteral("file://localhost/"), Qt::CaseInsensitive)
-                        ? p.mid(16)
-                        : p.mid(7);
-                const QString decoded = QUrl::fromEncoded(p.toUtf8()).toLocalFile();
-                if(!candidate.isEmpty() && QFileInfo::exists(candidate)) {
-                    p = candidate;
-                } else if(!decoded.isEmpty() && QFileInfo::exists(decoded)) {
-                    p = decoded;
-                } else if(!decoded.isEmpty() && decoded != candidate && candidate.contains('%')) {
-                    p = decoded;
-                } else {
-                    p = candidate;
+            if(WebRadioUtil::isStreamUrl(p)) {
+                const QString titleHint = hash.value(QString("title" + QString::number(nb))).trimmed();
+                if(!titleHint.isEmpty()) {
+                    MetaDataService::getInstance().registerStreamHint(p, titleHint);
                 }
-            }
-            if(!p.isEmpty() && !QDir::isAbsolutePath(p)) {
-                p = QDir::cleanPath(playlistDir.absoluteFilePath(p));
-            }
-            QString u = VFI.getVUrl(p);
-            if((u.isEmpty() || !VFI.exist(u)) && !p.isEmpty() && QFileInfo::exists(p)) {
-                const QString canonical = QFileInfo(p).canonicalFilePath();
-                if(!canonical.isEmpty()) {
-                    u = VFI.getVUrl(canonical);
+                bool ok = false;
+                const qint64 rawLen = hash.value(QString("length" + QString::number(nb))).toLongLong(&ok);
+                const quint64 t = (ok && rawLen > 0) ? static_cast<quint64>(rawLen) : 0;
+                pls->ajouterUrl(p, t);
+            } else {
+                if(p.startsWith(QStringLiteral("file://"), Qt::CaseInsensitive)) {
+                    const QString candidate = p.startsWith(QStringLiteral("file://localhost/"), Qt::CaseInsensitive)
+                            ? p.mid(16)
+                            : p.mid(7);
+                    const QString decoded = QUrl::fromEncoded(p.toUtf8()).toLocalFile();
+                    if(!candidate.isEmpty() && QFileInfo::exists(candidate)) {
+                        p = candidate;
+                    } else if(!decoded.isEmpty() && QFileInfo::exists(decoded)) {
+                        p = decoded;
+                    } else if(!decoded.isEmpty() && decoded != candidate && candidate.contains('%')) {
+                        p = decoded;
+                    } else {
+                        p = candidate;
+                    }
                 }
-            }
-            if(VFI.exist(u)) {
-                quint64 t = hash.value(QString("length"+QString::number(nb))).toULongLong();
-                pls->ajouterUrl(u,t);
+                if(!p.isEmpty() && !QDir::isAbsolutePath(p)) {
+                    p = QDir::cleanPath(playlistDir.absoluteFilePath(p));
+                }
+                QString u = VFI.getVUrl(p);
+                if((u.isEmpty() || !VFI.exist(u)) && !p.isEmpty() && QFileInfo::exists(p)) {
+                    const QString canonical = QFileInfo(p).canonicalFilePath();
+                    if(!canonical.isEmpty()) {
+                        u = VFI.getVUrl(canonical);
+                    }
+                }
+                if(VFI.exist(u)) {
+                    bool ok = false;
+                    const qint64 rawLen = hash.value(QString("length" + QString::number(nb))).toLongLong(&ok);
+                    const quint64 t = (ok && rawLen > 0) ? static_cast<quint64>(rawLen) : 0;
+                    pls->ajouterUrl(u, t);
+                }
             }
         }catch( const std::exception & e ) {
         }

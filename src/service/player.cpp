@@ -20,6 +20,7 @@
 
 #include "../vi18n/vi18n.h"
 #include "../virtualfiles/VFservice.h"
+#include "../util/webradioutil.h"
 
 #include <nemonotifications-qt5/notification.h>
 
@@ -234,8 +235,13 @@ void playerService::replace(const QList<QString> &vurl, bool recursif) {
  */
 void playerService::doChargement(const QList<QString> &vurls, bool recursif, qint64 position, bool autoplay) {
 
-    QList<VFInfo *> *li = new QList<VFInfo *>();
+    QStringList resolvedVurls;
     foreach (QString source, vurls) {
+        if (WebRadioUtil::isStreamUrl(source)) {
+            resolvedVurls.append(source.trimmed());
+            continue;
+        }
+
         if(VFI.exist(source)==false) {
             continue;
         }
@@ -252,23 +258,26 @@ void playerService::doChargement(const QList<QString> &vurls, bool recursif, qin
 
             QList<VFInfo *> res = VFI.getSynch(source, VFService::FILTERAUDIO,
                                                recursif ? VFService::RECURSIVE : VFService::FILE, VFService::URI );
-            li->append(res);
+            foreach (VFInfo *info, res) {
+                if (info) {
+                    resolvedVurls.append(info->getVUrl());
+                }
+            }
+            qDeleteAll(res);
             continue;
         }
 
         // un fichier (audio) ajoute
         VFInfo *singleInfo = VFI.getInfo(source);
         if (singleInfo) {
-            li->append(singleInfo);
+            resolvedVurls.append(singleInfo->getVUrl());
+            delete singleInfo;
         }
     }
 
     QList<MetaData *> *ll = new QList<MetaData *>();
-    foreach(VFInfo *info, *li) {
-        if (!info) {
-            continue;
-        }
-        MetaData *meta = MetaDataService::getInstance().getMetaData( info->getVUrl());
+    foreach(const QString &itemVurl, resolvedVurls) {
+        MetaData *meta = MetaDataService::getInstance().getMetaData(itemVurl);
         if (!meta) {
             continue;
         }
@@ -281,11 +290,6 @@ void playerService::doChargement(const QList<QString> &vurls, bool recursif, qin
             break;
         }
     }
-
-    if(li->length()>0) {
-        qDeleteAll(*li);
-    }
-    delete li;
 
     // on calcule la position dans la liste
     // @NOTA @FIXME si vurls est vide, le .at lance une exception sur qlist.h mais
@@ -1017,6 +1021,9 @@ void playerService::handleMprisPropertiesChanged(const QString &interface, const
  * @param vurl
  */
 void playerService::onRemoved(QString vurl) {
+    if (vurl.isEmpty()) {
+        return;
+    }
 
     QStack<qint64> stack;
 
@@ -1040,6 +1047,9 @@ void playerService::onRemoved(QString vurl) {
  * @param as
  */
 void playerService::onMoved(QString vurl, QString as) {
+    if (vurl.isEmpty()) {
+        return;
+    }
 
     for (int i = 0 ; i < liste.size() ; i++) {
         MetaData *m = liste.at(i);

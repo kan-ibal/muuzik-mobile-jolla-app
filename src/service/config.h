@@ -248,7 +248,7 @@ public:
     quint16 getNbRecent() const {return nbRecent; }
     void setNbRecent(quint16 v);
 
-    // playlist location (0: ~/Playlist, 1: ~/Music/playlists, 2: sdcard/Music/playlists)
+    // playlist location (0: ~/Playlists, 1: ~/Music/playlists, 2: sdcard/Music/playlists)
     quint16 getPlaylistLocation() const { return playlistLocation; }
     void setPlaylistLocation(quint16 v);
 

@@ -142,7 +142,7 @@ Page {
                     rightMargin: Theme.horizontalPageMargin
                 }
                 font.pixelSize: Theme.fontSizeTiny
-                text: artiste + " - " + album
+                text: (artiste.length > 0 && album.length > 0) ? (artiste + " - " + album) : (artiste.length > 0 ? artiste : album)
                 elide: Text.ElideRight
             }
 

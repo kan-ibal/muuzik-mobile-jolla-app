@@ -2,6 +2,7 @@
 #include <QDebug>
 
 #include "../virtualfiles/VFservice.h"
+#include "../util/webradioutil.h"
 
 MetaData::MetaData(QObject *parent) : UuidItem(parent),annee(0),duree(0){
 }
@@ -59,6 +60,10 @@ QList<QMediaContent> MetaData::versMediaContent(QList<MetaData *> *s) {
         if (!t) {
             continue;
         }
+        if (WebRadioUtil::isStreamUrl(t->getChemin())) {
+            l.append(QMediaContent(WebRadioUtil::playbackUrl(t->getChemin())));
+            continue;
+        }
         QString url = VFI.getPathFromVUrl(t->getChemin());
         l.append(QMediaContent(QUrl::fromLocalFile(url)));
     }
@@ -74,6 +79,9 @@ QList<QMediaContent> MetaData::versMediaContent(QList<MetaData *> *s) {
 QMediaContent MetaData::versMediaContent(MetaData *t) {
     if (!t) {
         return QMediaContent();
+    }
+    if (WebRadioUtil::isStreamUrl(t->getChemin())) {
+        return QMediaContent(WebRadioUtil::playbackUrl(t->getChemin()));
     }
     QString url = VFI.getPathFromVUrl(t->getChemin());
     return QMediaContent(QUrl::fromLocalFile(url));

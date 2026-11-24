@@ -1,7 +1,7 @@
 #include "pls.h"
 #include <QDebug>
 
-Pls::Pls(QObject *parent) : UuidItem(parent), duree(0) {
+Pls::Pls(QObject *parent) : UuidItem(parent), type(PlsType::PLS), duree(0) {
 
 }
 

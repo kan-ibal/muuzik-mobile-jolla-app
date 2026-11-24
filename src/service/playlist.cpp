@@ -16,6 +16,7 @@
 
 #include "config.h"
 #include "manager/plsmanager.h"
+#include "manager/m3umanager.h"
 #include "metadataservice.h"
 
 #include "../vi18n/vi18n.h"
@@ -26,7 +27,7 @@
 #include <nemonotifications-qt5/notification.h>
 
 static QRegularExpression REG_PLS( "\\.pls$", QRegularExpression::CaseInsensitiveOption);
-static QRegularExpression REG_M3U( "\\.m3u$", QRegularExpression::CaseInsensitiveOption);
+static QRegularExpression REG_M3U( "\\.m3u8?$", QRegularExpression::CaseInsensitiveOption);
 
 /**
  * @brief playlistService::playlistService
@@ -214,12 +215,18 @@ bool playlistService::write(const qint64 uuid,const QList<MetaData *> tracks) {
         if( plsManager::marshaller(tracks, pls->getPath()) ==false ) {
             return false;
         }
+    } else if(pls->getType() == Pls::PlsType::M3U) {
+        if( m3uManager::marshaller(tracks, pls->getPath()) ==false ) {
+            return false;
+        }
+    } else {
+        return false;
+    }
 
-        foreach (MetaData *m, tracks) {
-            if (m) {
-                chemins.append(m->getChemin());
-                durees.append(QVariant::fromValue(static_cast<qulonglong>(m->getDuree())));
-            }
+    foreach (MetaData *m, tracks) {
+        if (m) {
+            chemins.append(m->getChemin());
+            durees.append(QVariant::fromValue(static_cast<qulonglong>(m->getDuree())));
         }
     }
 
@@ -243,7 +250,7 @@ void playlistService::finaliseWrite(const qint64 uuid, const QStringList &chemin
     }
 
     Pls *pls = liste.at(index);
-    if(pls->getType() == Pls::PlsType::PLS) {
+    if(pls->getType() == Pls::PlsType::PLS || pls->getType() == Pls::PlsType::M3U) {
         pls->resetUrl();
         for (int i = 0; i < chemins.size(); ++i) {
             quint64 d = (i < durees.size()) ? durees.at(i).toULongLong() : 0;
@@ -416,7 +423,10 @@ bool playlistService::rename(const qint64 uuid,const QString &nom) {
     Pls *item = liste.at(index);
 
     QString ext(".pls");
-    if(item->getType() == Pls::PlsType::M3U) {
+    const QString currentSuffix = QFileInfo(item->getPath()).suffix();
+    if(!currentSuffix.isEmpty()) {
+        ext = "." + currentSuffix;
+    } else if(item->getType() == Pls::PlsType::M3U) {
         ext = ".m3u";
     }
     QString parentDir = QFileInfo(item->getPath()).absolutePath();
@@ -483,6 +493,14 @@ void playlistService::refresh() {
                 seenFiles.insert(key);
                 liste.append( plsManager::unmarshaller(fullPath) );
             } else if(REG_M3U.match(f).hasMatch()) {
+                const QString fullPath = dir.absoluteFilePath(f);
+                const QString canonical = QFileInfo(fullPath).canonicalFilePath();
+                const QString key = canonical.isEmpty() ? fullPath : canonical;
+                if(seenFiles.contains(key)) {
+                    continue;
+                }
+                seenFiles.insert(key);
+                liste.append( m3uManager::unmarshaller(fullPath) );
             }
         }
     }
@@ -564,11 +582,11 @@ QString playlistService::getPlaylistLocation() {
             }
             targetPath = QDir::cleanPath(SdcardLocator::getInstance().getLocation() + "/" + sdMusic + "/playlists");
         } else {
-            qDebug() << "playlistService : sdcard not present, falling back to ~/Playlist";
-            targetPath = QDir::cleanPath(QDir::homePath() + "/Playlist");
+            qDebug() << "playlistService : sdcard not present, falling back to ~/Playlists";
+            targetPath = QDir::cleanPath(QDir::homePath() + "/Playlists");
         }
     } else {
-        targetPath = QDir::cleanPath(QDir::homePath() + "/Playlist");
+        targetPath = QDir::cleanPath(QDir::homePath() + "/Playlists");
     }
 
     if(!QDir().exists(targetPath)) {

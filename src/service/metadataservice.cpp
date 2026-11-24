@@ -14,6 +14,7 @@
 
 #include "../virtualfiles/VFservice.h"
 #include "../vi18n/vi18n.h"
+#include "../util/webradioutil.h"
 #include "artwork.h"
 
 /**
@@ -61,6 +62,28 @@ void MetaDataService::init(QQmlContext *context, QString name) {
  * directement les info du premier media
  * @return meta data or null if not found (or can't read)
  */
+void MetaDataService::registerStreamHint(const QString &vurl, const QString &title) {
+    const QString trimmedUrl = vurl.trimmed();
+    const QString trimmedTitle = title.trimmed();
+    if (trimmedUrl.isEmpty() || trimmedTitle.isEmpty()) {
+        return;
+    }
+
+    QMutexLocker lock(&mutex);
+    streamTitleHints.insert(trimmedUrl, trimmedTitle);
+
+    if (cache.contains(trimmedUrl)) {
+        MetaData *existing = cache.value(trimmedUrl);
+        if (existing) {
+            const WebRadioInfo info = WebRadioUtil::parse(trimmedUrl);
+            if (info.isStream && info.name.isEmpty() &&
+                    (existing->getTitre().isEmpty() || existing->getTitre() == info.fallbackTitle)) {
+                existing->setTitre(trimmedTitle);
+            }
+        }
+    }
+}
+
 MetaData *MetaDataService::getMetaData(const QString & vurl, bool soft) {
     QMutexLocker lock(&mutex);
     //qDebug() << "MetaDataService::getMetaData " << vurl;
@@ -68,7 +91,8 @@ MetaData *MetaDataService::getMetaData(const QString & vurl, bool soft) {
         return cache.value(vurl);
     }
 
-    if(VFI.exist(vurl) == false) {
+    const bool isStream = WebRadioUtil::isStreamUrl(vurl);
+    if(!isStream && VFI.exist(vurl) == false) {
         return NULL;
     }
 
@@ -132,6 +156,26 @@ qDebug() << "meta de " << vurl << " " << m1->getArtiste();
  */
 MetaData *MetaDataService::doGetMetaData(const QString & vurl) {
     MetaData *m = new MetaData();
+
+    if (WebRadioUtil::isStreamUrl(vurl)) {
+        const WebRadioInfo info = WebRadioUtil::parse(vurl);
+        m->setChemin(info.rawUrl);
+        m->setDuree(0);
+
+        QString title = info.name;
+        if (title.isEmpty()) {
+            QMutexLocker lock(&MetaDataService::getInstance().mutex);
+            title = MetaDataService::getInstance().streamTitleHints.value(info.rawUrl);
+        }
+        if (title.isEmpty()) {
+            title = info.fallbackTitle;
+        }
+        m->setTitre(title);
+        m->setArtiste(info.author);
+        m->setAlbum(info.app);
+        return m;
+    }
+
     m->setChemin(vurl);
     // m->setPochette(ARTS.getArt(vurl));
 

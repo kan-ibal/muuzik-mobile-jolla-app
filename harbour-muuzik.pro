@@ -66,11 +66,13 @@ SOURCES += \
     src/bean/MetaData.cpp \
     src/service/artwork.cpp \
     src/service/manager/plsmanager.cpp \
+    src/service/manager/m3umanager.cpp \
     src/testjson.cpp \
     src/util/daofavoris.cpp \
     src/util/rowfavoris.cpp \
     src/bean/albumstat.cpp \
-    src/bean/track.cpp
+    src/bean/track.cpp \
+    src/util/webradioutil.cpp
 
 
 HEADERS += \
@@ -103,11 +105,13 @@ HEADERS += \
     src/bean/MetaData.h \
     src/service/artwork.h \
     src/service/manager/plsmanager.h \
+    src/service/manager/m3umanager.h \
     src/testjson.h \
     src/util/daofavoris.h \
     src/util/rowfavoris.h \
     src/bean/albumstat.h \
-    src/bean/track.h
+    src/bean/track.h \
+    src/util/webradioutil.h
 
 OTHER_FILES += qml/harbour-muuzik.qml \
     qml/cover/*.qml \

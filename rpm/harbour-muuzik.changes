@@ -1,8 +1,11 @@
-* Tue Nov 17 2026 kan-ibal <kan-ibal@users.noreply.github.com> 2.6.0
+* Tue Nov 24 2026 kan-ibal <kan-ibal@users.noreply.github.com> 2.6.0
 - add feature to remember queue and song position
 - mpris update to org.mpris.Mediaplayer2
 - small warning fixes
-- libtag album art
+- libtag album art support
+- M3U playlists support
+- radio streams support in playlists
+
 
 * Mon Nov 16 2026 kan-ibal <kan-ibal@users.noreply.github.com> 2.5.4
 - memory leaks

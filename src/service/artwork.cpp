@@ -44,6 +44,7 @@
 
 #include "../vi18n/vi18n.h"
 #include "../virtualfiles/VFservice.h"
+#include "../util/webradioutil.h"
 #include "../qnetworkwatcher/qnetworkwatcher.h"
 #include "../qdownloader/qdownloaderservice.h"
 
@@ -129,6 +130,16 @@ QString ArtWorkService::getArt(const QString &vurl) {
         if(cache.contains(vurl)) {
             return cache.value(vurl);
         }
+    }
+
+    if (WebRadioUtil::isStreamUrl(vurl)) {
+        const WebRadioInfo info = WebRadioUtil::parse(vurl);
+        const QString icon = info.iconUrl.trimmed();
+        {
+            QMutexLocker locker(&cacheMutex);
+            cache.insert(vurl, icon);
+        }
+        return icon;
     }
 
     if(VFI.exist(vurl) == false) {
