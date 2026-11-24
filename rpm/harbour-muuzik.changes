@@ -6,7 +6,6 @@
 - M3U playlists support
 - radio streams support in playlists
 
-
 * Mon Nov 16 2026 kan-ibal <kan-ibal@users.noreply.github.com> 2.5.4
 - memory leaks
 - small fixes
