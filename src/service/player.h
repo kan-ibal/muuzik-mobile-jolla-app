@@ -47,6 +47,11 @@ class playerService : public QObject {
     Q_PROPERTY(bool enCours READ estEnCours NOTIFY enCoursChanged )
 
     Q_PROPERTY(bool showControl READ getShowControl WRITE setShowControl NOTIFY showControlChanged)
+    Q_PROPERTY(QString streamArtist READ getStreamArtist NOTIFY streamMetaDataChanged )
+    Q_PROPERTY(QString streamTitle READ getStreamTitle NOTIFY streamMetaDataChanged )
+    Q_PROPERTY(QString audioCodec READ getAudioCodec NOTIFY streamMetaDataChanged )
+    Q_PROPERTY(int audioBitrate READ getAudioBitrate NOTIFY streamMetaDataChanged )
+    Q_PROPERTY(bool isStream READ isCurrentStream NOTIFY titleChanged )
 
 
 public:
@@ -243,6 +248,12 @@ public:
     bool getShowControl() const { return showControl; }
     void setShowControl(const bool val);
 
+    QString getStreamArtist() const { return currentStreamArtist; }
+    QString getStreamTitle() const { return currentStreamTitle; }
+    QString getAudioCodec() const { return currentAudioCodec; }
+    int getAudioBitrate() const { return currentAudioBitrate; }
+    Q_INVOKABLE bool isCurrentStream() const;
+
 
 protected :
     // on en a besoin depuis doChargement
@@ -275,9 +286,15 @@ private:
     QSettings settings;
 
     bool showControl;
+    QString currentStreamArtist;
+    QString currentStreamTitle;
+    QString currentAudioCodec;
+    int currentAudioBitrate;
 
     void persistSession();
     void applyPendingRestorePosition();
+    void updateStreamMetaData(bool clearFirst = false);
+    void resetStreamMetaData();
 
     /**
      * @brief parcours la liste et retourne l'index du titre qui a l'uuid ; -1 si trouve pas
@@ -315,6 +332,7 @@ signals:
     void chargementFaitIntr( QList<MetaData *> *liste, const qint64 position, bool autoplay);
 
     void showControlChanged(); // si doit afficher ou masques les controles en plein ecran
+    void streamMetaDataChanged();
 
 
 public slots  :
@@ -336,6 +354,7 @@ private slots :
     void changementIndex(int position); // changement de media
     void changementMediaStatus(QMediaPlayer::MediaStatus status);
     void changementSeekable(bool seekable);
+    void changementMetaData();
 
 
     void appelRecu(const QDBusMessage &a);

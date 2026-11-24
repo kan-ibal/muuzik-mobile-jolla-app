@@ -3,50 +3,51 @@ import Sailfish.Silica 1.0
 import "../../js/app.js" as App
 
 Item {
-    id:info
+    id: infoTitreRoot
 
     property var morceau: playerService.title
 
-    anchors {
-        horizontalCenter: parent.horizontalCenter
-    }
     width: parent.width
+    height: infoColumn.height
 
-    // titre du morceau en cours
-    Label {
-        id:titre
-        anchors {
-            horizontalCenter: parent.horizontalCenter
-        }
-        font.pixelSize: Theme.fontSizeExtraLarge
-        font.bold: true
-        elide: Text.ElideRight
-        color: Theme.highlightColor
-        text: morceau ? morceau.titre : "---"
-    }
+    Column {
+        id: infoColumn
+        width: parent.width - Theme.horizontalPageMargin * 2
+        anchors.horizontalCenter: parent.horizontalCenter
+        spacing: Theme.paddingSmall / 2
 
-    // artiste du morceau en cours
-    Label {
-        id:artiste
-        anchors {
-            horizontalCenter: parent.horizontalCenter
-            top:titre.bottom
+        // titre du morceau en cours
+        Label {
+            id: titre
+            width: parent.width
+            horizontalAlignment: Text.AlignHCenter
+            font.pixelSize: Theme.fontSizeExtraLarge
+            font.bold: true
+            elide: Text.ElideRight
+            color: Theme.highlightColor
+            text: morceau && (morceau.titre.length > 0) ? morceau.titre : "---"
         }
-        font.pixelSize: Theme.fontSizeMedium
-        elide: Text.ElideRight
-        color: Theme.highlightColor
-        text: morceau && (morceau.artiste.length>0) ? morceau.artiste : "---"
-    }
 
-    // album du morceau en cours
-    Label {
-        anchors {
-            horizontalCenter: parent.horizontalCenter
-            top:artiste.bottom
+        // artiste du morceau en cours
+        Label {
+            id: artiste
+            width: parent.width
+            horizontalAlignment: Text.AlignHCenter
+            font.pixelSize: Theme.fontSizeMedium
+            elide: Text.ElideRight
+            color: Theme.highlightColor
+            text: morceau && (morceau.artiste.length > 0) ? morceau.artiste : "---"
         }
-        font.pixelSize: Theme.fontSizeMedium
-        elide: Text.ElideRight
-        color: Theme.highlightColor
-        text: morceau && (morceau.album.length>0) ? morceau.album : "---"
+
+        // album du morceau en cours
+        Label {
+            id: album
+            width: parent.width
+            horizontalAlignment: Text.AlignHCenter
+            font.pixelSize: Theme.fontSizeMedium
+            elide: Text.ElideRight
+            color: Theme.highlightColor
+            text: morceau && (morceau.album.length > 0) ? morceau.album : "---"
+        }
     }
 }

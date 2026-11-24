@@ -10,7 +10,13 @@
 #include <QCoreApplication>
 #include <QQmlEngine>
 #include <QMetaObject>
+#include <QMediaMetaData>
+#include <QFile>
+#include <QFileInfo>
 #include <QThread>
+
+#include <taglib/fileref.h>
+#include <taglib/audioproperties.h>
 
 #include "config.h"
 #include "../app.h"
@@ -25,6 +31,108 @@
 #include <nemonotifications-qt5/notification.h>
 
 #define MAX_TAILLE_PLAYLIST 250
+
+namespace {
+
+QString metaVariantToString(const QVariant &val) {
+    if (!val.isValid() || val.isNull()) {
+        return QString();
+    }
+    if (val.type() == QVariant::StringList) {
+        QStringList cleaned;
+        foreach (const QString &item, val.toStringList()) {
+            const QString trimmed = item.trimmed();
+            if (!trimmed.isEmpty()) {
+                cleaned.append(trimmed);
+            }
+        }
+        return cleaned.join(QStringLiteral(", "));
+    }
+    if (val.type() == QVariant::List) {
+        QStringList cleaned;
+        foreach (const QVariant &item, val.toList()) {
+            const QString trimmed = item.toString().trimmed();
+            if (!trimmed.isEmpty()) {
+                cleaned.append(trimmed);
+            }
+        }
+        return cleaned.join(QStringLiteral(", "));
+    }
+    return val.toString().trimmed();
+}
+
+QString firstMetaString(const QMediaPlayer *player, const QStringList &keys) {
+    if (!player) {
+        return QString();
+    }
+    foreach (const QString &key, keys) {
+        const QString value = metaVariantToString(player->metaData(key));
+        if (!value.isEmpty()) {
+            return value;
+        }
+    }
+    return QString();
+}
+
+int parseBitrateKbps(const QMediaPlayer *player, const QStringList &keys) {
+    if (!player) {
+        return 0;
+    }
+    foreach (const QString &key, keys) {
+        const QVariant val = player->metaData(key);
+        if (!val.isValid() || val.isNull()) {
+            continue;
+        }
+        bool ok = false;
+        const double raw = val.toDouble(&ok);
+        if (ok && raw > 0.0) {
+            return (raw >= 1000.0) ? qRound(raw / 1000.0) : qRound(raw);
+        }
+    }
+    return 0;
+}
+
+void splitIcyArtistTitle(const QString &rawTitle, QString &outArtist, QString &outTitle) {
+    const QString trimmed = rawTitle.trimmed();
+    outArtist.clear();
+    outTitle = trimmed;
+    if (trimmed.isEmpty()) {
+        return;
+    }
+
+    const QStringList separators = QStringList()
+            << QStringLiteral(" - ")
+            << QStringLiteral(" \u2013 ")
+            << QStringLiteral(" \u2014 ");
+    foreach (const QString &sep, separators) {
+        const int idx = trimmed.indexOf(sep);
+        if (idx > 0) {
+            const QString left = trimmed.left(idx).trimmed();
+            const QString right = trimmed.mid(idx + sep.length()).trimmed();
+            if (!left.isEmpty() && !right.isEmpty()) {
+                outArtist = left;
+                outTitle = right;
+                return;
+            }
+        }
+    }
+}
+
+QString fallbackCodecFromSuffix(const QString &filePath) {
+    const QString ext = QFileInfo(filePath).suffix().trimmed().toLower();
+    if (ext == QLatin1String("mp3")) return QStringLiteral("MP3");
+    if (ext == QLatin1String("flac")) return QStringLiteral("FLAC");
+    if (ext == QLatin1String("opus")) return QStringLiteral("Opus");
+    if (ext == QLatin1String("ogg") || ext == QLatin1String("oga")) return QStringLiteral("Vorbis");
+    if (ext == QLatin1String("aac")) return QStringLiteral("AAC");
+    if (ext == QLatin1String("m4a") || ext == QLatin1String("m4b")) return QStringLiteral("M4A");
+    if (ext == QLatin1String("wav")) return QStringLiteral("PCM");
+    if (ext == QLatin1String("aif") || ext == QLatin1String("aiff")) return QStringLiteral("AIFF");
+    if (ext == QLatin1String("alac")) return QStringLiteral("ALAC");
+    return QString();
+}
+
+} // namespace
 
 /**
  * @brief playerService::playerService
@@ -43,7 +151,8 @@ playerService::playerService(QObject *parent)
     , navigatingHistory(false)
     , settings(QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation)
                + "/" + QCoreApplication::applicationName() + ".conf",
-               QSettings::NativeFormat) {
+               QSettings::NativeFormat)
+    , currentAudioBitrate(0) {
 
     // le "chargeur" de titre
     connect(this,
@@ -63,6 +172,8 @@ playerService::playerService(QObject *parent)
     connect(media, SIGNAL(durationChanged(qint64)), SLOT(changementDureeMedia(qint64)));
     connect(media, SIGNAL(mediaStatusChanged(QMediaPlayer::MediaStatus)), SLOT(changementMediaStatus(QMediaPlayer::MediaStatus)));
     connect(media, SIGNAL(seekableChanged(bool)), SLOT(changementSeekable(bool)));
+    connect(media, SIGNAL(metaDataChanged()), SLOT(changementMetaData()));
+    connect(media, SIGNAL(metaDataAvailableChanged(bool)), SLOT(changementMetaData()));
 
     // dbus
     mpris = new Mpris(this);
@@ -147,6 +258,7 @@ void playerService::arreter() {
     playHistory.clear();
     lastCurrentIndex = -1;
     navigatingHistory = false;
+    resetStreamMetaData();
 }
 
 /**
@@ -215,6 +327,7 @@ void playerService::replace(const QList<QString> &vurl, bool recursif) {
     lastCurrentIndex = -1;
     navigatingHistory = false;
     dureeTotale=0;
+    resetStreamMetaData();
     emit listChanged();
     emit titleChanged(NULL);
     emit statusChanged(false);
@@ -660,6 +773,7 @@ void playerService::effacer() {
     dureeTotale=0;
     nom=QString();
     pendingRestorePositionMs = -1;
+    resetStreamMetaData();
 
     persistSession();
     emit listChanged();
@@ -865,7 +979,9 @@ void playerService::switchLoop(){
 void playerService::changementEtat(QMediaPlayer::State state) {
     emit statusChanged(state == QMediaPlayer::PlayingState);
     applyPendingRestorePosition();
-    if (state == QMediaPlayer::PausedState || state == QMediaPlayer::StoppedState) {
+    if (state == QMediaPlayer::PlayingState) {
+        updateStreamMetaData(false);
+    } else if (state == QMediaPlayer::PausedState || state == QMediaPlayer::StoppedState) {
         persistSession();
     }
 }
@@ -899,7 +1015,15 @@ void playerService::changementDureeMedia(qint64 duration) {
 void playerService::changementMediaStatus(QMediaPlayer::MediaStatus status) {
     if (status == QMediaPlayer::InvalidMedia || status == QMediaPlayer::EndOfMedia) {
         pendingRestorePositionMs = -1;
+        if (status == QMediaPlayer::InvalidMedia) {
+            resetStreamMetaData();
+        }
         return;
+    }
+    if (status == QMediaPlayer::LoadedMedia ||
+            status == QMediaPlayer::BufferedMedia ||
+            status == QMediaPlayer::BufferingMedia) {
+        updateStreamMetaData(false);
     }
     applyPendingRestorePosition();
 }
@@ -910,6 +1034,126 @@ void playerService::changementSeekable(bool seekable) {
     }
 }
 
+void playerService::changementMetaData() {
+    updateStreamMetaData(false);
+}
+
+bool playerService::isCurrentStream() const {
+    MetaData *track = getTitle();
+    return track && WebRadioUtil::isStreamUrl(track->getChemin());
+}
+
+void playerService::resetStreamMetaData() {
+    if (currentStreamArtist.isEmpty() &&
+            currentStreamTitle.isEmpty() &&
+            currentAudioCodec.isEmpty() &&
+            currentAudioBitrate == 0) {
+        return;
+    }
+    currentStreamArtist.clear();
+    currentStreamTitle.clear();
+    currentAudioCodec.clear();
+    currentAudioBitrate = 0;
+    emit streamMetaDataChanged();
+}
+
+void playerService::updateStreamMetaData(bool clearFirst) {
+    MetaData *track = getTitle();
+    if (!media || !track) {
+        resetStreamMetaData();
+        return;
+    }
+
+    const bool isStream = WebRadioUtil::isStreamUrl(track->getChemin());
+    const bool metaAvailable = media->isMetaDataAvailable() || !media->availableMetaData().isEmpty();
+
+    QString newArtist = clearFirst ? QString() : currentStreamArtist;
+    QString newTitle = clearFirst ? QString() : currentStreamTitle;
+    QString newCodec = clearFirst ? QString() : currentAudioCodec;
+    int newBitrate = clearFirst ? 0 : currentAudioBitrate;
+
+    if (metaAvailable) {
+        const QStringList artistKeys = QStringList()
+                << QMediaMetaData::ContributingArtist
+                << QMediaMetaData::AlbumArtist
+                << QMediaMetaData::Author
+                << QStringLiteral("Artist")
+                << QStringLiteral("artist");
+        const QStringList titleKeys = QStringList()
+                << QMediaMetaData::Title
+                << QStringLiteral("Title")
+                << QStringLiteral("title")
+                << QStringLiteral("StreamTitle")
+                << QStringLiteral("icy-title");
+        const QStringList codecKeys = QStringList()
+                << QMediaMetaData::AudioCodec
+                << QStringLiteral("audio-codec")
+                << QStringLiteral("AudioCodec")
+                << QStringLiteral("codec")
+                << QStringLiteral("container-format");
+        const QStringList bitrateKeys = QStringList()
+                << QMediaMetaData::AudioBitRate
+                << QStringLiteral("nominal-bitrate")
+                << QStringLiteral("AudioBitRate")
+                << QStringLiteral("bitrate")
+                << QStringLiteral("icy-br")
+                << QStringLiteral("maximum-bitrate")
+                << QStringLiteral("minimum-bitrate");
+
+        QString rawArtist = firstMetaString(media, artistKeys);
+        QString rawTitle = firstMetaString(media, titleKeys);
+
+        if (isStream && rawArtist.isEmpty() && !rawTitle.isEmpty()) {
+            QString parsedArtist;
+            QString parsedTitle;
+            splitIcyArtistTitle(rawTitle, parsedArtist, parsedTitle);
+            rawArtist = parsedArtist;
+            rawTitle = parsedTitle;
+        }
+
+        newArtist = rawArtist;
+        newTitle = rawTitle;
+
+        const QString detectedCodec = firstMetaString(media, codecKeys);
+        if (!detectedCodec.isEmpty() || clearFirst) {
+            newCodec = detectedCodec;
+        }
+
+        const int detectedBitrate = parseBitrateKbps(media, bitrateKeys);
+        if (detectedBitrate > 0 || clearFirst) {
+            newBitrate = detectedBitrate;
+        }
+    }
+
+    if (!isStream && (newBitrate <= 0 || newCodec.isEmpty())) {
+        const QString localPath = VFI.getPathFromVUrl(track->getChemin());
+        if (!localPath.isEmpty()) {
+            if (newCodec.isEmpty()) {
+                newCodec = fallbackCodecFromSuffix(localPath);
+            }
+            if (newBitrate <= 0) {
+                TagLib::FileRef fr(QFile::encodeName(localPath).constData(), true, TagLib::AudioProperties::Fast);
+                if (!fr.isNull() && fr.audioProperties() != NULL && fr.audioProperties()->bitrate() > 0) {
+                    newBitrate = fr.audioProperties()->bitrate();
+                }
+            }
+        }
+    }
+
+    if (newArtist == currentStreamArtist &&
+            newTitle == currentStreamTitle &&
+            newCodec == currentAudioCodec &&
+            newBitrate == currentAudioBitrate) {
+        return;
+    }
+
+    currentStreamArtist = newArtist;
+    currentStreamTitle = newTitle;
+    currentAudioCodec = newCodec;
+    currentAudioBitrate = newBitrate;
+    emit streamMetaDataChanged();
+}
+
 /**
  * @brief playerService::changementIndex
  * @param position
@@ -918,6 +1162,7 @@ void playerService::changementIndex(int position) {
     if(position==-1) {
         pendingRestorePositionMs = -1;
         lastCurrentIndex = -1;
+        resetStreamMetaData();
         if (media) media->stop();
         if (playlist && playlist->mediaCount() > 0) {
             playlist->setCurrentIndex(0);
@@ -943,6 +1188,7 @@ void playerService::changementIndex(int position) {
 
     emit indexChanged(position);
     emit titleChanged(getTitle());
+    updateStreamMetaData(true);
 
     if (!sessionRestaurePlaylist) {
         persistSession();

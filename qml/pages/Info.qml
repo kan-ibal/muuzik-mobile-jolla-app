@@ -21,9 +21,16 @@ Page {
             return;
         }
 
-        artiste = t.artiste;
+        var streamArt = playerService.streamArtist;
+        var streamTit = playerService.streamTitle;
+        if (playerService.isStream && (streamArt.length > 0 || streamTit.length > 0)) {
+            artiste = streamArt;
+            titre = streamTit.length > 0 ? streamTit : t.titre;
+        } else {
+            artiste = t.artiste;
+            titre = t.titre;
+        }
         album = t.album;
-        titre = t.titre;
         chemin = t.chemin;
     }
 
@@ -81,7 +88,7 @@ Page {
     }
 
     onStatusChanged: {
-        if (status === PageStatus.Active && direct === false) {
+        if ((status === PageStatus.Activating || status === PageStatus.Active) && direct === false) {
             setTitre(playerService.title);
         }
     }
@@ -95,6 +102,14 @@ Page {
             }
 
             setTitre(t);
+        }
+
+        onStreamMetaDataChanged: {
+            if (status !== PageStatus.Active || direct === true) {
+                return;
+            }
+
+            setTitre(playerService.title);
         }
     }
 }

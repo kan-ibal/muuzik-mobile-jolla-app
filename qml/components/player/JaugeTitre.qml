@@ -15,7 +15,7 @@ Item {
     property int _ecouteTitre: playerService.getPosition()                    // already listened to the track
 
     width: parent.width
-    height: fond.height + compteur.height
+    height: fond.height + Theme.horizontalPageMargin + compteur.height
 
     //-----------------------------------------
     function mettreAJourInfoListe() {

@@ -16,6 +16,7 @@
 #include "../vi18n/vi18n.h"
 #include "../qnetworkwatcher/qnetworkwatcher.h"
 #include "../virtualfiles/VFservice.h"
+#include "../util/webradioutil.h"
 #include "config.h"
 #include "../app.h"
 
@@ -259,9 +260,15 @@ QString *paroleService::decode(QString const v) {
 */
 
 void paroleService::ecriture(QString const &url, QString const &donnee) {
+    if (WebRadioUtil::isStreamUrl(url)) {
+        return;
+    }
 
     QString vparent = VFI.getParentVUrl(url);
     QString parent = VFI.getPathFromVUrl(vparent);
+    if (parent.isEmpty()) {
+        return;
+    }
 
     if(VFI.exist(vparent + "/" + PAROLECACHEDIR) ==false) {
         // We retrieve the parent record's date because it will change when PAROLECACHEDIR is created
@@ -305,8 +312,14 @@ void paroleService::ecriture(QString const &url, QString const &donnee) {
  * @return empty if none
  */
 QString paroleService::lecture(QString const &url) {
+    if (WebRadioUtil::isStreamUrl(url)) {
+        return QString();
+    }
 
     QString chemin = VFI.getPathFromVUrl(url);
+    if (chemin.isEmpty()) {
+        return QString();
+    }
     QString path = VFI.getParentVUrl(chemin);
     QString fichier = VFI.getName(chemin);
 
@@ -329,8 +342,14 @@ QString paroleService::lecture(QString const &url) {
  * @param Virtual path to the audio file
  */
 void paroleService::effacer(const QString & url) {
+    if (WebRadioUtil::isStreamUrl(url)) {
+        return;
+    }
 
     QString chemin = VFI.getPathFromVUrl(url);
+    if (chemin.isEmpty()) {
+        return;
+    }
     QString path = VFI.getParentVUrl(chemin);
     QString fichier = VFI.getName(chemin);
 

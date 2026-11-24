@@ -107,18 +107,83 @@ Rectangle {
             }
         }
 
-        // info titre
+        // info titre + stream / encoder metadata
         Item {
             id:info
 
             anchors {
                 top: _vertical ? jauge.bottom : fermeture.bottom
-                topMargin: Theme.paddingLarge
+                topMargin: Theme.paddingSmall
+                bottom: echelle.top
+                bottomMargin: Theme.paddingSmall
                 right: parent.right
             }
             width: _vertical ? parent.width : parent.width / 2
 
-            InfoTitre {
+            Column {
+                id: infoContentColumn
+                width: parent.width
+                y: Math.max(0, (parent.height - height) / 2)
+                spacing: Theme.paddingSmall
+
+                InfoTitre {
+                }
+
+                Column {
+                    id: streamEncoderInfo
+                    width: parent.width - Theme.horizontalPageMargin * 2
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    spacing: Theme.paddingSmall / 2
+
+                    readonly property string encoderText: {
+                        var parts = [];
+                        if (playerService.audioCodec.length > 0) {
+                            parts.push(playerService.audioCodec);
+                        }
+                        if (playerService.audioBitrate > 0) {
+                            parts.push(playerService.audioBitrate + " kbps");
+                        }
+                        return parts.join(" \u2022 ");
+                    }
+
+                    visible: playerService.streamArtist.length > 0 ||
+                             playerService.streamTitle.length > 0 ||
+                             encoderText.length > 0
+
+                    Label {
+                        id: streamArtistLabel
+                        width: parent.width
+                        horizontalAlignment: Text.AlignHCenter
+                        font.pixelSize: Theme.fontSizeSmall
+                        elide: Text.ElideRight
+                        color: Theme.primaryColor
+                        text: playerService.streamArtist
+                        visible: playerService.streamArtist.length > 0
+                    }
+
+                    Label {
+                        id: streamTitleLabel
+                        width: parent.width
+                        horizontalAlignment: Text.AlignHCenter
+                        font.pixelSize: Theme.fontSizeSmall
+                        font.bold: true
+                        elide: Text.ElideRight
+                        color: Theme.primaryColor
+                        text: playerService.streamTitle
+                        visible: playerService.streamTitle.length > 0
+                    }
+
+                    Label {
+                        id: encoderInfoLabel
+                        width: parent.width
+                        horizontalAlignment: Text.AlignHCenter
+                        font.pixelSize: Theme.fontSizeExtraSmall
+                        elide: Text.ElideRight
+                        color: Theme.secondaryColor
+                        text: streamEncoderInfo.encoderText
+                        visible: streamEncoderInfo.encoderText.length > 0
+                    }
+                }
             }
         }
 
